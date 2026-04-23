@@ -1,0 +1,120 @@
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+  z-index: 1000;
+
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.auth-modal-card {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 32px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 30px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-sizing: border-box;
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(243, 244, 246, 0.9);
+  color: #111827;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+}
+
+.auth-modal-close:hover {
+  background: #e5e7eb;
+  transform: scale(1.03);
+}
+/* =========================
+   AUTH MODAL ONLY STYLES
+   ========================= */
+
+/* Title */
+.auth-card .auth-title {
+  margin-top: 8px;
+  margin-bottom: 6px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Subtitle */
+.auth-card .auth-subtitle {
+  margin-bottom: 20px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Brand */
+.auth-card .auth-brand-header {
+  margin-bottom: 12px;
+}
+
+.auth-card .brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-card .brand-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.auth-card .brand-name {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Inputs */
+.auth-card .auth-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  margin-bottom: 12px;
+  font-size: 14px;
+  background: rgba(249, 250, 251, 0.8);
+  transition: all 0.2s ease;
+}
+
+.auth-card .auth-input:focus {
+  outline: none;
+  border-color: #111827;
+  background: white;
+}
+
+/* Dropdown */
+.auth-card select.auth-input {
+  appearance: none;
+  cursor: pointer;
+}
+
+/* Button */
+.auth-card .auth-button {
+  margin-top: 8px;
+}
+

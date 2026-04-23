@@ -1,0 +1,187 @@
+.auth-panel {
+  width: 100%;
+  max-width: 500px;
+  padding: 36px 36px 30px;
+}
+
+.auth-panel-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.auth-panel-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.10);
+}
+
+.auth-panel-name {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #09111f;
+}
+
+.auth-panel-tagline {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.auth-panel h1 {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #09111f;
+}
+
+.auth-subtitle {
+  margin: 14px 0 26px;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-input {
+  height: 56px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(249, 250, 251, 0.8);
+  border-radius: 18px;
+  padding: 0 18px;
+  font-size: 15px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.auth-input:focus {
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
+}
+
+.auth-button {
+  height: 56px;
+  border: none;
+  border-radius: 18px;
+  background: #09111f;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.2s ease;
+}
+
+.auth-button:hover {
+  opacity: 0.98;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.auth-button-secondary {
+  width: 100%;
+  height: 56px;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-button-secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.auth-status {
+  margin-top: 14px;
+  color: #dc2626;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.auth-footer {
+  margin-top: 22px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.auth-footer a {
+  color: #111827;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+/* Brand (icon + Enyi) */
+.auth-brand-header {
+  margin-bottom: 6px;
+}
+
+.auth-brand-header .brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-brand-header .brand-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.auth-brand-header .brand-name {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* Heading (Create account) */
+.auth-card h1 {
+  margin-top: 6px;   /* tighter than 6px */
+  margin-bottom: 12px;
+  letter-spacing: -0.035em;
+  line-height: 0.96;
+}
+.auth-subtitle {
+    margin: 0 0 24px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: #6b7280;
+    max-width: 540px;
+}
