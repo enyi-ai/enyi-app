@@ -202,7 +202,7 @@ setTransactions((prev) => [
       }
 
 const response = await 
-fetch(`${process.env.REACT_APP_API_BASE_URL}/api/receipt/parse`, {
+fetch(`${process.env.REACT_APP_API_BASE_URL}/api/categorise-expense`, {
   method: "POST",
   headers: {
     "Content-Type": "application/json"
