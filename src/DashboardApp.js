@@ -71,6 +71,33 @@ function App() {
     type: "expense"
   });
 
+const normalizeCategory = (category, text = "") => {
+  const value = `${category} ${text}`.toLowerCase();
+
+  if (
+    value.includes("fuel") ||
+    value.includes("petrol") ||
+    value.includes("diesel")
+  ) {
+    return "Fuel";
+  }
+
+if (
+  value.includes("uber") ||
+  value.includes("taxi") ||
+  value.includes("train") ||
+  value.includes("bus") ||
+  value.includes("flight") ||
+  value.includes("plane") ||
+  value.includes("transport")
+) {
+  return "Travel";
+}
+
+  return category || "Misc";
+};
+
+
 useEffect(() => {
   const loadTransactions = async () => {
     if (!currentUser) {
@@ -219,7 +246,7 @@ if (!response.ok) {
 const newTransaction = {
   id: Date.now(),
   text: input,
-  category: data.category || "Misc",
+  category: normalizeCategory(data.category, input),
   amount: Number(data.amount) || 0,
   date: new Date().toISOString(),
   type: "expense"
@@ -244,8 +271,10 @@ setTransactions((prev) => [
 
 setInput("");
 setStatusMessage("");
+const finalCategory = normalizeCategory(data.category, input);
+
 setTransactionSuccessMessage(
-  `Expense added (${data.category}: ${formatCurrency(Number(data.amount) || 0)})`
+  `Expense added (${finalCategory}: ${formatCurrency(Number(data.amount) || 0)})`
 );
 
 setTimeout(() => {
