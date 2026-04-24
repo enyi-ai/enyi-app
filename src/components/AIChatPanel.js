@@ -50,7 +50,7 @@ function AIChatPanel({ selectedFinancialYear, transactions }) {
 
     try {
       const response = await 
-fetch(`${process.env.REACT_APP_API_BASE_URL}/api/receipt/parse`, {
+fetch(`${process.env.REACT_APP_API_BASE_URL}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
