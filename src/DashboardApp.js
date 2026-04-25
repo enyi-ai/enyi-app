@@ -147,10 +147,10 @@ useEffect(() => {
 
       const snapshot = await getDocs(q);
 
-      const items = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
+    const items = snapshot.docs.map((docSnap) => ({
+  ...docSnap.data(),
+  id: docSnap.id,
+}));
 
       setTransactions(items);
     } catch (error) {
@@ -251,6 +251,7 @@ setTransactions((prev) => [
 
         setInput("");
         setStatusMessage("");
+        setTransactionDate(new Date().toISOString().split("T")[0]);
         setTransactionSuccessMessage(
           `Income added (${formatCurrency(cleanAmount)})`
         );
@@ -305,8 +306,8 @@ setTransactions((prev) => [
 
 setInput("");
 setStatusMessage("");
+setTransactionDate(new Date().toISOString().split("T")[0]);
 const finalCategory = normalizeCategory(data.category, input);
-
 setTransactionSuccessMessage(
   `Expense added (${finalCategory}: ${formatCurrency(Number(data.amount) || 0)})`
 );
@@ -468,7 +469,9 @@ const clearAllTransactions = async () => {
       text: transaction.text,
       category: transaction.category,
       amount: transaction.amount,
-      date: transaction.date,
+      date: transaction.date
+  ? new Date(transaction.date).toISOString().split("T")[0]
+  : "",
       type: transaction.type || "expense"
     });
   };
@@ -479,7 +482,7 @@ const saveEdit = async (id) => {
   const updatedTransaction = {
     text: editForm.text,
     category: editForm.category,
-    amount: editForm.amount,
+    amount: Number(editForm.amount),
     date: editForm.date,
     type: editForm.type,
   };
@@ -1461,14 +1464,14 @@ const handleSignOut = async () => {
                           className="fin-input"
                         />
 
-                        <input
-                          value={editForm.date}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, date: e.target.value })
-                          }
-                          className="fin-input"
-                        />
-
+                          <input
+  type="date"
+  value={editForm.date}
+  onChange={(e) =>
+    setEditForm({ ...editForm, date: e.target.value })
+  }
+  className="fin-input"
+/>
                         <div className="button-group">
                           <button
                             onClick={() => saveEdit(transaction.id)}
