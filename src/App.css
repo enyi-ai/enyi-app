@@ -1320,10 +1320,70 @@ img {
 .auth-card .brand-name {
   font-size: 28px;
 }
-@media (max-width: 768px){
-  :root{
-    --brand-size: 42px;
-    --brand-icon-box: 72px;
-    --brand-tagline: 14px;
+
+/* FINAL: keep dashboard brand consistent desktop + mobile */
+.app-shell .brand-name {
+  font-family: Inter, Arial, sans-serif;
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  color: #0b1220;
+}
+
+.app-shell .brand-tagline {
+  font-family: Inter, Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.app-shell .brand-icon-tile {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #f7f8fc, #ffffff);
+  overflow: hidden;
+}
+
+.app-shell .brand-icon {
+  width: 140%;
+  height: 140%;
+  object-fit: cover;
+}
+
+.app-shell .nav-dropdown button {
+  color: #0b1220;
+  font-family: Inter, Arial, sans-serif;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-shell .nav-dropdown button.nav-signout,
+.app-shell .nav-signout {
+  color: #b91c1c;
+}
+
+/* Mobile: keep same brand, only slightly smaller */
+@media (max-width: 768px) {
+  .app-shell .brand-name {
+    font-size: 42px;
+  }
+
+  .app-shell .brand-icon-tile {
+    width: 88px;
+    height: 88px;
+  }
+
+  .app-shell .brand-tagline {
+    font-size: 17px;
+  }
+
+  .app-shell .nav-dropdown button {
+    color: #0b1220;
+  }
+
+  .app-shell .nav-signout {
+    color: #b91c1c;
   }
 }
