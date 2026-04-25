@@ -38,6 +38,9 @@ function App() {
   const [otherIncomeAmount, setOtherIncomeAmount] = useState("");
   const [otherIncomeSources, setOtherIncomeSources] = useState([]);
   const [transactionType, setTransactionType] = useState("expense");
+  const [transactionDate, setTransactionDate] = useState(
+  new Date().toISOString().split("T")[0]
+);
   const [statusMessage, setStatusMessage] = useState("");
   const [transactionSuccessMessage, setTransactionSuccessMessage] = useState("");
   const [receiptSuccessMessage, setReceiptSuccessMessage] = useState("");
@@ -103,6 +106,27 @@ if (
 ) {
   return "Travel";
 }
+if (value.includes("mortgage")) return "Mortgage";
+if (value.includes("rent")) return "Rent";
+if (value.includes("groceries")) return "Groceries";
+if (value.includes("restaurant")) return "Food";
+if (value.includes("tesco")) return "Groceries";
+if (value.includes("aldi")) return "Groceries";
+if (value.includes("sainsbury")) return "Groceries";
+if (value.includes("asda")) return "Groceries";
+if (value.includes("food")) return "Food";
+if (value.includes("electric")) return "Utilities";
+if (value.includes("water")) return "Utilities";
+if (value.includes("gas")) return "Utilities";
+if (value.includes("internet")) return "Internet";
+if (value.includes("phone")) return "Phone";
+if (value.includes("insurance")) return "Insurance";
+if (value.includes("repair")) return "Car Maintenance";
+if (value.includes("service")) return "Car Maintenance";
+if (value.includes("accountant")) return "Professional fees";
+if (value.includes("legal")) return "Professional fees";
+if (value.includes("amazon")) return "Shopping";
+
 
   return category || "Misc";
 };
@@ -204,7 +228,7 @@ useEffect(() => {
           text: input,
           category: "Income",
           amount: cleanAmount,
-          date: new Date().toISOString(),
+         date: new Date(transactionDate).toISOString(),
           type: "income"
         };
 
@@ -258,7 +282,7 @@ const newTransaction = {
   text: input,
   category: normalizeCategory(data.category, input),
   amount: Number(data.amount) || 0,
-  date: new Date().toISOString(),
+  date: new Date(transactionDate).toISOString(),
   type: "expense"
 };
 
@@ -922,6 +946,13 @@ const handleSignOut = async () => {
               className="fin-input"
             />
 
+            <input
+  type="date"
+  value={transactionDate}
+  onChange={(e) => setTransactionDate(e.target.value)}
+  className="fin-input"
+/>
+
             <button onClick={addTransaction} className="primary-button">
               Add Transaction
             </button>
@@ -1037,11 +1068,20 @@ const handleSignOut = async () => {
                     })
                   }
                 >
-                  <option value="Food">Food</option>
-                  <option value="Travel">Travel</option>
-                  <option value="Utilities">Utilities</option>
-                  <option value="Rent">Rent</option>
-                  <option value="Misc">Misc</option>
+<option value="Groceries">Groceries</option>
+<option value="Food">Food</option>
+<option value="Travel">Travel</option>
+<option value="Fuel">Fuel</option>
+<option value="Mortgage">Mortgage</option>
+<option value="Rent">Rent</option>
+<option value="Professional fees">Professional fees</option>
+<option value="Car Maintenance">Car Maintenance</option>
+<option value="Utilities">Utilities</option>
+<option value="Internet">Internet</option>
+<option value="Phone">Phone</option>
+<option value="Insurance">Insurance</option>
+<option value="Shopping">Shopping</option>
+<option value="Misc">Misc</option>
                 </select>
 
                 <div className="button-group">
