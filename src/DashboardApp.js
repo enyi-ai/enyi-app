@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import logoIcon from "./assets/enyi-icon.png";
 import AIChatPanel from "./components/AIChatPanel";
+import { FiMenu } from "react-icons/fi";
 
 function getCurrentFinancialYear() {
   const today = new Date();
@@ -47,6 +48,7 @@ function App() {
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [showReceiptReview, setShowReceiptReview] = useState(false);
   const [region] = useState("England / Wales / Northern Ireland");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -70,6 +72,14 @@ function App() {
     date: "",
     type: "expense"
   });
+  const scrollToSection = (id) => {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+
+  setMenuOpen(false);
+};
 
 const normalizeCategory = (category, text = "") => {
   const value = `${category} ${text}`.toLowerCase();
@@ -791,6 +801,7 @@ const handleSignOut = async () => {
     <div className="app-shell">
       <div className="app-container">
         <header className="brand-header">
+
   <div className="brand-lockup">
     <div className="brand-icon-tile">
       <img src={logoIcon} alt="Enyi icon" className="brand-icon" />
@@ -802,9 +813,35 @@ const handleSignOut = async () => {
     </div>
   </div>
 
-  <button onClick={handleSignOut} className="signout-btn">
-    Sign out
-  </button>
+           <div className="nav-menu-wrapper">
+    <button
+      className="nav-menu-button"
+      onClick={() => setMenuOpen(!menuOpen)}
+      aria-label="Open navigation menu"
+    >
+      <FiMenu size={24} />
+    </button>
+
+    {menuOpen && (
+      <div className="nav-dropdown">
+        <button onClick={() => scrollToSection("add-transaction")}>Add Transaction</button>
+        <button onClick={() => scrollToSection("receipts")}>Receipts</button>
+        <button onClick={() => scrollToSection("financial-overview")}>Financial Overview</button>
+        <button onClick={() => scrollToSection("spending-categories")}>Spending Categories</button>
+        <button onClick={() => scrollToSection("tax-estimate")}>Tax Estimate</button>
+        <button onClick={() => scrollToSection("enyi-ai")}>Enyi AI</button>
+        <button onClick={() => scrollToSection("transaction-history")}>Transaction History</button>
+
+        <div className="nav-divider" />
+
+        <button className="nav-signout" onClick={handleSignOut}>
+          Sign Out
+        </button>
+      </div>
+    )}
+    </div>
+
+
 </header>
 
         <section className="hero-card">
@@ -858,11 +895,11 @@ const handleSignOut = async () => {
         </section>
 
         <section className="top-grid">
-          <div className="fin-card">
-            <div className="section-head">
-              <h2>Add Transaction</h2>
-              <p>Quickly log income or expenses</p>
-            </div>
+  <div id="add-transaction" className="fin-card">
+    <div className="section-head">
+      <h2>Add Transaction</h2>
+      <p>Quickly log income or expenses</p>
+    </div>
 
             <select
               value={transactionType}
@@ -895,12 +932,11 @@ const handleSignOut = async () => {
             )}
           </div>
 
-          <div className="fin-card">
-            <div className="section-head">
-              <h2>Receipts</h2>
-              <p>Capture or upload receipts instantly</p>
-            </div>
-
+          <div id="receipts" className="fin-card">
+  <div className="section-head">
+    <h2>Receipts</h2>
+    <p>Capture or upload receipts instantly</p>
+  </div>
             <div className="receipt-actions">
               <label className="primary-button action-button">
                 Take Receipt Photo
@@ -1023,7 +1059,9 @@ const handleSignOut = async () => {
         </section>
 
         <section className="two-column-grid">
-          <div className="fin-card">
+
+
+<div id="financial-overview" className="fin-card">
  <div className="summary-top">
   <div>
     <h2>Financial Overview</h2>
@@ -1092,7 +1130,7 @@ const handleSignOut = async () => {
             </div>
           </div>
 
-  <div className="fin-card">
+<div id="spending-categories" className="fin-card">
   <div className="section-head">
     <h2>Spending by Category</h2>
     <p>See where your money is going in {selectedFinancialYear}</p>
@@ -1129,7 +1167,8 @@ const handleSignOut = async () => {
 </div>
         </section>
 
- <section className="fin-card tax-section">
+ 
+<section id="tax-estimate" className="fin-card">
   <div className="summary-top">
     <div>
       <h2>Tax Estimate</h2>
@@ -1261,12 +1300,13 @@ const handleSignOut = async () => {
   </p>
 </section>
 
+<div id="enyi-ai" className="fin-card"></div>
 <AIChatPanel
   selectedFinancialYear={selectedFinancialYear}
   transactions={transactions}
 />
 
-<section className="fin-card">
+<section id="transaction-history" className="fin-card">
   <div className="section-head">
     <h2 className="section-title">Transaction History</h2>
     <p>Review and manage your records for {selectedFinancialYear}</p>
