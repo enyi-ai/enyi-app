@@ -1498,3 +1498,17 @@ html, body, #root {
     letter-spacing: -0.065em;
   }
 }
+/* Final mobile brand override */
+@media (max-width: 768px) {
+  .app-shell .brand-tagline {
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    color: #6b7280 !important;
+  }
+
+  .app-shell .brand-icon-tile {
+    width: 78px !important;
+    height: 78px !important;
+  }
+}
