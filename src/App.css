@@ -1365,9 +1365,21 @@ img {
 }
 
 /* Mobile: keep same brand, only slightly smaller */
+/* Mobile brand lock */
 @media (max-width: 768px) {
   .app-shell .brand-name {
     font-size: 42px;
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.06em;
+    color: #0b1220;
+  }
+
+  .app-shell .brand-tagline {
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.25;
+    color: #6b7280;
   }
 
   .app-shell .brand-icon-tile {
@@ -1375,15 +1387,20 @@ img {
     height: 88px;
   }
 
-  .app-shell .brand-tagline {
-    font-size: 17px;
+  .app-shell .brand-icon {
+    width: 140%;
+    height: 140%;
+    object-fit: cover;
   }
 
   .app-shell .nav-dropdown button {
     color: #0b1220;
+    font-family: Inter, Arial, sans-serif;
+    font-weight: 700;
+    text-decoration: none;
   }
 
-  .app-shell .nav-signout {
+  .app-shell .nav-dropdown .nav-signout {
     color: #b91c1c;
   }
 }
