@@ -1444,3 +1444,40 @@ html, body, #root {
     white-space: normal;
   }
 }
+
+/* Final font lock */
+.app-shell,
+.app-shell * {
+  font-family: Inter, Arial, sans-serif;
+}
+
+.app-shell .brand-name {
+  font-size: 42px;
+  line-height: 0.9;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.app-shell .hero-title {
+  font-size: 78px;
+  line-height: 0.9;
+  font-weight: 900;
+  letter-spacing: -0.065em;
+}
+
+/* Mobile only changes size, not font style */
+@media (max-width: 768px) {
+  .app-shell .brand-name {
+    font-size: 42px;
+    line-height: 0.9;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+
+  .app-shell .hero-title {
+    font-size: 54px;
+    line-height: 0.95;
+    font-weight: 900;
+    letter-spacing: -0.065em;
+  }
+}
