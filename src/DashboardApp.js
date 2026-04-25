@@ -549,7 +549,7 @@ const filteredHistoryTransactions = financialYearTransactions
   .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const categoryTotals = {};
-  transactions
+financialYearTransactions
     .filter((transaction) => transaction.type !== "income")
     .forEach((transaction) => {
       const amount = parseFloat(transaction.amount) || 0;
