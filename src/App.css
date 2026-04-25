@@ -1387,3 +1387,60 @@ img {
     color: #b91c1c;
   }
 }
+/* Fix mobile width */
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.app-shell,
+.app-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .hero-grid,
+  .overview-strip,
+  .top-grid,
+  .two-column-grid {
+    display: grid;
+    grid-template-columns: 1fr !important;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .hero-card,
+  .hero-balance-card,
+  .fin-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .hero-title {
+    font-size: 48px;
+    line-height: 1;
+    word-break: break-word;
+  }
+
+  .brand-lockup {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .brand-text {
+    min-width: 0;
+  }
+
+  .brand-name {
+    font-size: 36px;
+  }
+
+  .brand-tagline {
+    font-size: 14px;
+    white-space: normal;
+  }
+}
