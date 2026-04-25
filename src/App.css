@@ -1512,3 +1512,34 @@ html, body, #root {
     height: 78px !important;
   }
 }
+@media (max-width: 768px) {
+  .fin-card {
+    padding: 24px;
+  }
+
+  .fin-input {
+    width: 100%;
+    min-height: 56px;
+    font-size: 16px;
+    margin-top: 14px;
+    box-sizing: border-box;
+  }
+
+  input[type="date"].fin-input {
+    padding: 0 45px 0 18px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  .primary-button,
+  .secondary-button {
+    width: 100%;
+    min-height: 56px;
+  }
+
+  .receipt-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
