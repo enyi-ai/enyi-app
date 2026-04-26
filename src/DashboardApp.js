@@ -48,6 +48,7 @@ function App() {
   const [csvRange, setCsvRange] = useState("all");
   const [csvStartDate, setCsvStartDate] = useState("");
   const [csvEndDate, setCsvEndDate] = useState("");
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   const [receiptStatus, setReceiptStatus] = useState("");
   const [receiptFile, setReceiptFile] = useState(null);
@@ -216,6 +217,16 @@ const events = ["mousemove", "keydown", "click", "touchstart"];
     events.forEach((event) => window.removeEventListener(event, resetTimer));
   };
 }, [currentUser]);
+
+useEffect(() => {
+  const handleScroll = () => {
+    setShowBackToTop(window.scrollY > 300);
+  };
+
+  window.addEventListener("scroll", handleScroll);
+
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
 
   const getCategoryColor = (category) => {
     const key = (category || "").toLowerCase();
@@ -901,6 +912,12 @@ const handleSignOut = async () => {
     console.error(error);
   }
 };
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+};
 
   return (
     <div className="app-shell">
@@ -1019,8 +1036,8 @@ const handleSignOut = async () => {
               type="text"
               placeholder={
                 transactionType === "income"
-                  ? "Enter income..."
-                  : "Enter expense..."
+                  ? "Enter income (e.g Fees 350)"
+                  : "Enter expense (e.g Uber 25)"
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -1657,6 +1674,11 @@ const handleSignOut = async () => {
     </div>
   )}
 </section>
+{showBackToTop && (
+  <button className="back-to-top" onClick={scrollToTop}>
+    ↑ Top
+  </button>
+)}
       </div>
     </div>
   );

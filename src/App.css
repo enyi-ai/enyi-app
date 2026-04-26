@@ -1587,3 +1587,17 @@ html, body, #root {
 .legal-container li {
   color: #374151;
 }
+.back-to-top {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  background: #09111f;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+}
