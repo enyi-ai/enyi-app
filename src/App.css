@@ -1526,10 +1526,26 @@ html, body, #root {
   }
 
   input[type="date"].fin-input {
-    padding: 0 45px 0 18px;
+    width: 100%;
+    min-height: 56px;
+    padding: 0 52px 0 18px;
+    margin-top: 14px;
     margin-bottom: 14px;
-    overflow: hidden;
+    border: 1px solid #dbe3ea;
+    border-radius: 18px;
+    background: #fff;
+    color: #09111f;
+    font-size: 16px;
+    box-sizing: border-box;
+    overflow: visible;
   }
+
+  input[type="date"].fin-input::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    display: block;
+    cursor: pointer;
+    margin-right: 8px;
+}
 
   .primary-button,
   .secondary-button {
