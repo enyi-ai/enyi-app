@@ -111,7 +111,7 @@ return (
       <LandingPage onGetStarted={() => navigate("/signup")} />
 
       <AuthModal
-        isOpen={authModalOpen && !user && !profileLoading}
+        isOpen={authModalOpen}
         onClose={() => navigate("/")}
       >
        <Routes>
