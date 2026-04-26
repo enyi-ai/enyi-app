@@ -191,6 +191,32 @@ useEffect(() => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+useEffect(() => {
+  if (!currentUser) return;
+
+  const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
+  let timer;
+
+  const resetTimer = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      await auth.signOut();
+      setCurrentUser(null);
+    }, INACTIVITY_LIMIT);
+  };
+
+  const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+
+  events.forEach((event) => window.addEventListener(event, resetTimer));
+
+  resetTimer();
+
+  return () => {
+    clearTimeout(timer);
+    events.forEach((event) => window.removeEventListener(event, resetTimer));
+  };
+}, [currentUser]);
+
   const getCategoryColor = (category) => {
     const key = (category || "").toLowerCase();
     if (key === "food") return "chip-food";
