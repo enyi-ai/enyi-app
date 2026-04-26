@@ -6,7 +6,7 @@ import "./LandingPage.css";
 function LandingPage({ onGetStarted }) {
     const navigate = useNavigate();
   return (
-    <div className="landing-page">
+    <div className="app-shell landing-page">
       <section className="landing-hero">
         <div className="landing-copy">
           <header className="brand-header">
