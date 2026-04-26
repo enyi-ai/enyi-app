@@ -45,6 +45,9 @@ function App() {
   const [transactionSuccessMessage, setTransactionSuccessMessage] = useState("");
   const [receiptSuccessMessage, setReceiptSuccessMessage] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+  const [csvRange, setCsvRange] = useState("all");
+  const [csvStartDate, setCsvStartDate] = useState("");
+  const [csvEndDate, setCsvEndDate] = useState("");
 
   const [receiptStatus, setReceiptStatus] = useState("");
   const [receiptFile, setReceiptFile] = useState(null);
@@ -700,14 +703,55 @@ const getHistoryMonthSummary = (monthTransactions) => {
     profit: income - expenses
   };
 };
-  const downloadCSV = () => {
-    if (transactions.length === 0) {
-      alert("No transactions to download.");
+
+const downloadCSV = () => {
+  if (transactions.length === 0) {
+    alert("No transactions to download.");
+    return;
+  }
+
+  let exportTransactions = [...transactions];
+
+  const today = new Date();
+
+  if (csvRange === "3months") {
+    const start = new Date();
+    start.setMonth(start.getMonth() - 3);
+
+    exportTransactions = exportTransactions.filter((transaction) => {
+      const date = new Date(transaction.date);
+      return date >= start && date <= today;
+    });
+  }
+
+  if (csvRange === "6months") {
+    const start = new Date();
+    start.setMonth(start.getMonth() - 6);
+
+    exportTransactions = exportTransactions.filter((transaction) => {
+      const date = new Date(transaction.date);
+      return date >= start && date <= today;
+    });
+  }
+
+  if (csvRange === "custom") {
+    if (!csvStartDate || !csvEndDate) {
+      alert("Please select both start and end dates.");
       return;
     }
 
-    const headers = ["Text", "Type", "Category", "Amount", "Date"];
-    const rows = transactions.map((transaction) => [
+    const start = new Date(`${csvStartDate}T00:00:00`);
+    const end = new Date(`${csvEndDate}T23:59:59`);
+
+    exportTransactions = exportTransactions.filter((transaction) => {
+      const date = new Date(transaction.date);
+      return date >= start && date <= end;
+    });
+  }
+
+  const headers = ["Text", "Type", "Category", "Amount", "Date"];
+  const rows = exportTransactions.map((transaction) => [
+    
       transaction.text,
       transaction.type,
       transaction.category,
@@ -726,7 +770,15 @@ const getHistoryMonthSummary = (monthTransactions) => {
 
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", "enyi-transactions.csv");
+    const userName =
+  currentUser?.displayName?.replace(/\s+/g, "-").toLowerCase() || "user";
+
+const downloadDate = new Date().toISOString().split("T")[0];
+
+link.setAttribute(
+  "download",
+  `${userName}-transactions-${downloadDate}.csv`
+);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1163,14 +1215,43 @@ const handleSignOut = async () => {
             </div>
 
             <div className="button-group top-space">
-              <button onClick={downloadCSV} className="primary-button">
-                Download CSV
-              </button>
+  <select
+    className="fin-input"
+    value={csvRange}
+    onChange={(e) => setCsvRange(e.target.value)}
+  >
+    <option value="all">All records</option>
+    <option value="3months">Last 3 months</option>
+    <option value="6months">Last 6 months</option>
+    <option value="custom">Custom range</option>
+  </select>
 
-              <button onClick={clearAllTransactions} className="secondary-button">
-                Clear All Data
-              </button>
-            </div>
+  {csvRange === "custom" && (
+    <>
+      <input
+        type="date"
+        className="fin-input"
+        value={csvStartDate}
+        onChange={(e) => setCsvStartDate(e.target.value)}
+      />
+
+      <input
+        type="date"
+        className="fin-input"
+        value={csvEndDate}
+        onChange={(e) => setCsvEndDate(e.target.value)}
+      />
+    </>
+  )}
+
+  <button onClick={downloadCSV} className="primary-button">
+    Download CSV
+  </button>
+
+  <button onClick={clearAllTransactions} className="secondary-button">
+    Clear All Data
+  </button>
+</div>
           </div>
 
 <div id="spending-categories" className="fin-card">
