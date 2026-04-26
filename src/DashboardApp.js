@@ -195,7 +195,7 @@ useEffect(() => {
 useEffect(() => {
   if (!currentUser) return;
 
-  const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
+  const INACTIVITY_LIMIT = 3 * 60 * 1000; // 3 minutes
   let timer;
 
   const resetTimer = () => {
