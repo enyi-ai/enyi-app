@@ -27,15 +27,14 @@ function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    setStatusMessage("");
+  setStatusMessage("");
 
-    try {
-      await signInWithPopup(auth, googleProvider);
-      navigate("/");
-    } catch (error) {
-      setStatusMessage(error.message || "Google sign-in failed.");
-    }
-  };
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch (error) {
+    setStatusMessage(error.message || "Google sign-in failed.");
+  }
+};
 
 return (
   <div className="auth-panel">
