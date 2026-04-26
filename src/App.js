@@ -34,7 +34,6 @@ function AppShell() {
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
     setUser(firebaseUser || null);
-    setProfileLoading(false);
   });
 
   return () => unsubscribe();
@@ -89,8 +88,6 @@ useEffect(() => {
 }, [user]);
 
   useEffect(() => {
-  if (user === undefined || profileLoading) return;
-
   if (user && !onboardingComplete && location.pathname !== "/onboarding") {
     navigate("/onboarding");
   }
@@ -101,17 +98,16 @@ useEffect(() => {
 
 }, [user, onboardingComplete, profileLoading, location.pathname, navigate]);
 
- if (user === undefined || profileLoading) {
-  return <div style={{ padding: "40px" }}>Loading...</div>;
+if (user === undefined || profileLoading) {
+  return null;
 }
 
-  if (user && onboardingComplete) {
+if (user && onboardingComplete) {
   return <DashboardApp />;
 }
 
-
-  return (
-    <>
+return (
+  <>
       <LandingPage onGetStarted={() => navigate("/signup")} />
 
       <AuthModal
