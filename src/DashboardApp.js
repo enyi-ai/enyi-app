@@ -205,7 +205,7 @@ useEffect(() => {
     }, INACTIVITY_LIMIT);
   };
 
-  const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+const events = ["mousemove", "keydown", "click", "touchstart"];
 
   events.forEach((event) => window.addEventListener(event, resetTimer));
 
