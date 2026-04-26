@@ -40,17 +40,22 @@ useEffect(() => {
   return () => unsubscribe();
 }, []);
 
-  useEffect(() => {
-    if (
-  location.pathname === "/login" ||
-  location.pathname === "/signup" ||
-  location.pathname === "/onboarding"
-) {
-  setAuthModalOpen(true);
-} else {
-  setAuthModalOpen(false);
-}
-  }, [location.pathname]);
+useEffect(() => {
+  if (user === undefined || user) {
+    setAuthModalOpen(false);
+    return;
+  }
+
+  if (
+    location.pathname === "/login" ||
+    location.pathname === "/signup" ||
+    location.pathname === "/onboarding"
+  ) {
+    setAuthModalOpen(true);
+  } else {
+    setAuthModalOpen(false);
+  }
+}, [location.pathname, user]);
 
 useEffect(() => {
   const loadUserProfile = async () => {
