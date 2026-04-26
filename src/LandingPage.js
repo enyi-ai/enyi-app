@@ -77,6 +77,17 @@ function LandingPage({ onGetStarted }) {
   </div>
 </div>
       </section>
+    <footer className="landing-footer">
+  <a href="/privacy">Privacy Policy</a>
+  <span>•</span>
+  <a href="/terms">Terms</a>
+  <span>•</span>
+  <a href="/cookies">Cookies</a>
+  <span>•</span>
+  <a href="mailto:support@enyi.ai">Contact</a>
+
+  <p>© 2026 Enyi. A product of CNTL Digital Solutions Ltd</p>
+</footer>
     </div>
   );
 }

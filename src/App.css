@@ -1559,3 +1559,31 @@ html, body, #root {
     gap: 14px;
   }
 }
+
+
+.legal-page {
+  min-height: 100vh;
+  background: #f6f8fc;
+  padding: 80px 20px;
+}
+
+.legal-container {
+  max-width: 900px;
+  margin: auto;
+  background: white;
+  border-radius: 24px;
+  padding: 50px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.08);
+  color: #09111f;
+  line-height: 1.8;
+}
+
+.legal-container h1,
+.legal-container h2 {
+  margin-bottom: 20px;
+}
+
+.legal-container p,
+.legal-container li {
+  color: #374151;
+}

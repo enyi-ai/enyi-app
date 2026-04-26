@@ -16,6 +16,9 @@ import SignUpPage from "./SignUpPage";
 import LandingPage from "./LandingPage";
 import AuthModal from "./AuthModal";
 import OnboardingPage from "./OnboardingPage";
+import PrivacyPolicy from "./PrivacyPolicy";
+import TermsOfService from "./TermsOfService";
+import CookiePolicy from "./CookiePolicy";
 
 function AppShell() {
   const [user, setUser] = useState(undefined);
@@ -124,6 +127,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/cookies" element={<CookiePolicy />} />
         <Route path="/*" element={<AppShell />} />
       </Routes>
     </BrowserRouter>

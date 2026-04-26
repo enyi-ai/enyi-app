@@ -5,8 +5,9 @@
     linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
   padding: 40px 24px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .landing-hero {
@@ -178,4 +179,38 @@
 
 .brand-name {
   font-size: 28px;
+}
+.landing-footer {
+  width: 100%;
+  margin-top: 60px;
+  padding-top: 24px;
+  border-top: 1px solid #e7edf4;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.landing-footer a {
+  color: #6b7280;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.landing-footer a:hover {
+  color: #09111f;
+}
+
+.landing-footer p {
+  width: 100%;
+  margin-top: 12px;
+  margin-bottom: 0;
+  font-size: 13px;
+  text-align: center;
 }
