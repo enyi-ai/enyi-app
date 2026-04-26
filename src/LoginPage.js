@@ -13,6 +13,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const navigate = useNavigate();
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -26,15 +27,20 @@ function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+ const handleGoogleLogin = async () => {
   setStatusMessage("");
+  setGoogleLoading(true);
 
   try {
     await signInWithPopup(auth, googleProvider);
   } catch (error) {
+    setGoogleLoading(false);
     setStatusMessage(error.message || "Google sign-in failed.");
   }
 };
+if (googleLoading) {
+  return null;
+}
 
 return (
   <div className="auth-panel">
