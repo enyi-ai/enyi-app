@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
-  signInWithPopup
+  signInWithPopup,
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
 import "./Auth.css";
@@ -26,6 +27,21 @@ function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+  setStatusMessage("");
+
+  if (!email) {
+    setStatusMessage("Please enter your email address first.");
+    return;
+  }
+
+  try {
+    await sendPasswordResetEmail(auth, email);
+    setStatusMessage("Password reset email sent. Check your inbox.");
+  } catch (error) {
+    setStatusMessage(error.message || "Could not send reset email.");
+  }
+};
   const handleGoogleLogin = async () => {
   setStatusMessage("");
 
@@ -76,6 +92,13 @@ return (
         className="auth-input"
         required
       />
+<button
+  type="button"
+  onClick={handleForgotPassword}
+  className="forgot-password"
+>
+  Forgot password?
+</button>
 
       <button type="submit" className="auth-button">
         Sign in
