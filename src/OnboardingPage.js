@@ -1,16 +1,22 @@
 import { useState } from "react";
+import { signOut } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 import "./Auth.css";
 import logoIcon from "./assets/enyi-icon.png";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 function OnboardingPage({ onComplete }) {
+    const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [occupation, setOccupation] = useState("");
   const [country, setCountry] = useState("United Kingdom");
   const [businessType, setBusinessType] = useState("Sole trader");
 
-
+const handleCancel = async () => {
+  await signOut(auth);
+  navigate("/");
+};
   const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -64,8 +70,12 @@ try {
     <div className="auth-modal-overlay">
       <div className="auth-modal-card">
         <div className="auth-card">
-
-          {/* BRAND */}
+<button
+  onClick={handleCancel}
+  className="close-button"
+>
+  ✕
+</button>
           <div className="auth-brand-header">
             <div className="brand-lockup">
               <img src={logoIcon} alt="Enyi" className="brand-icon" />
