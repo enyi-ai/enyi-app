@@ -4,7 +4,7 @@ import logoIcon from "./assets/enyi-icon.png";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
-function OnboardingPage() {
+function OnboardingPage({ onComplete }) {
   const [fullName, setFullName] = useState("");
   const [occupation, setOccupation] = useState("");
   const [country, setCountry] = useState("United Kingdom");
@@ -45,14 +45,16 @@ function OnboardingPage() {
     return;
   }
 
-  try {
-    await setDoc(
-      doc(db, "users", currentUser.uid),
-      data,
-      { merge: true }
-    );
+try {
+  await setDoc(
+    doc(db, "users", currentUser.uid),
+    data,
+    { merge: true }
+  );
 
-  } catch (error) {
+  onComplete();
+
+} catch (error) {
     console.error("Failed to save onboarding:", error);
     alert("Could not save your details. Please try again.");
   }

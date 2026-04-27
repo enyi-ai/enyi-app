@@ -34,27 +34,23 @@ function AppShell() {
 useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
     setUser(firebaseUser || null);
+    setProfileLoading(false);
   });
 
   return () => unsubscribe();
 }, []);
 
-useEffect(() => {
-  if (user === undefined || user) {
-    setAuthModalOpen(false);
-    return;
-  }
-
-  if (
-    location.pathname === "/login" ||
-    location.pathname === "/signup" ||
-    location.pathname === "/onboarding"
-  ) {
-    setAuthModalOpen(true);
-  } else {
-    setAuthModalOpen(false);
-  }
-}, [location.pathname, user]);
+  useEffect(() => {
+    if (
+  location.pathname === "/login" ||
+  location.pathname === "/signup" ||
+  location.pathname === "/onboarding"
+) {
+  setAuthModalOpen(true);
+} else {
+  setAuthModalOpen(false);
+}
+  }, [location.pathname]);
 
 useEffect(() => {
   const loadUserProfile = async () => {
@@ -88,6 +84,8 @@ useEffect(() => {
 }, [user]);
 
   useEffect(() => {
+  if (user === undefined || profileLoading) return;
+
   if (user && !onboardingComplete && location.pathname !== "/onboarding") {
     navigate("/onboarding");
   }
@@ -98,16 +96,17 @@ useEffect(() => {
 
 }, [user, onboardingComplete, profileLoading, location.pathname, navigate]);
 
-if (user === undefined || profileLoading) {
-  return null;
+ if (user === undefined || profileLoading) {
+  return <div style={{ padding: "40px" }}>Loading...</div>;
 }
 
-if (user && onboardingComplete) {
+  if (user && onboardingComplete) {
   return <DashboardApp />;
 }
 
-return (
-  <>
+
+  return (
+    <>
       <LandingPage onGetStarted={() => navigate("/signup")} />
 
       <AuthModal
@@ -118,7 +117,17 @@ return (
   <Route path="/" element={<LandingPage onGetStarted={() => navigate("/signup")} />} />
   <Route path="/login" element={<LoginPage />} />
   <Route path="/signup" element={<SignUpPage />} />
-  <Route path="/onboarding" element={<OnboardingPage />} />
+ <Route
+  path="/onboarding"
+  element={
+    <OnboardingPage
+      onComplete={() => {
+        setOnboardingComplete(true);
+        navigate("/");
+      }}
+    />
+  }
+/>
 </Routes>
       </AuthModal>
     </>

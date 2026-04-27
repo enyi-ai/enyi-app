@@ -16,7 +16,7 @@ function TermsOfService() {
 
       <p>
         Welcome to <strong>Enyi</strong>, a product of{" "}
-        <strong>CNTL Digital Solutions Ltd</strong>. By using Enyi, you agree
+        <strong>CNTL Technologies Ltd</strong>. By using Enyi, you agree
         to these Terms of Service.
       </p>
 
