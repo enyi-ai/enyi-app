@@ -74,7 +74,7 @@ function TermsOfService() {
 
       <h2>7. Limitation of Liability</h2>
       <p>
-        To the maximum extent permitted by law, CNTL Digital Solutions Ltd
+        To the maximum extent permitted by law, CNTL Technologies Ltd
         is not liable for indirect losses, lost profits, business interruption,
         or decisions made based on app-generated guidance.
       </p>

@@ -16,7 +16,7 @@ function CookiePolicy() {
 
       <p>
         This Cookie Policy explains how <strong>Enyi</strong>, a product of{" "}
-        <strong>CNTL Digital Solutions Ltd</strong>, uses cookies and similar
+        <strong>CNTL Technologies Ltd</strong>, uses cookies and similar
         technologies when you use our website and services.
       </p>
 

@@ -86,7 +86,7 @@ function LandingPage({ onGetStarted }) {
   <span>•</span>
   <a href="mailto:support@enyi.ai">Contact</a>
 
-  <p>© 2026 Enyi. A product of CNTL Digital Solutions Ltd</p>
+  <p>© 2026 Enyi</p>
 </footer>
     </div>
   );
