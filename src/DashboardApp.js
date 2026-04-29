@@ -70,7 +70,10 @@ function App() {
 
   return () => unsubscribe();
 }, []);
-
+useEffect(() => {
+  fetch(`${process.env.REACT_APP_API_BASE_URL}/api/health`)
+    .catch(() => {});
+}, []);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({
     text: "",
@@ -258,7 +261,7 @@ useEffect(() => {
     }
 
     try {
-      setStatusMessage("Enyi categorising your transaction. This may take some time");
+      setStatusMessage("I am categorising your transaction. sit tight");
 
       if (transactionType === "income") {
         const cleanAmount = extractAmountFromText(input);
@@ -361,6 +364,56 @@ setTimeout(() => {
   setStatusMessage(error.message || "Something went wrong.");
 }
   };
+const resizeImage = (file, maxWidth = 1400, quality = 0.85) => {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      resolve(file);
+      return;
+    }
+
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      img.src = e.target.result;
+    };
+
+    reader.onerror = reject;
+
+    img.onload = () => {
+      const scale = maxWidth / img.width;
+      const width = img.width > maxWidth ? maxWidth : img.width;
+      const height = img.width > maxWidth ? img.height * scale : img.height;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+
+          resolve(
+            new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
+              type: "image/jpeg",
+            })
+          );
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+
+    img.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
   const handleReceiptSelection = (file) => {
     if (!file) return;
@@ -376,10 +429,12 @@ setTimeout(() => {
     }
 
     try {
-      setReceiptStatus("Enyi is reading your receipt. First upload may take a little longer..");
+      setReceiptStatus("I am reading your receipt...just a moment");
 
-      const formData = new FormData();
-      formData.append("receipt", receiptFile);
+const compressedFile = await resizeImage(receiptFile);
+
+const formData = new FormData();
+formData.append("receipt", compressedFile);
 
       const response = await 
 fetch(`${process.env.REACT_APP_API_BASE_URL}/api/receipt/parse`, {
