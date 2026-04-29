@@ -91,7 +91,13 @@ Rules:
 - Return only JSON
 - No backticks
 - No extra words
-- amount must be the final total paid`
+- amount must be the final total paid
+- For UK receipts, dates are usually dd/mm/yyyy
+- Read the payment/date line of the receipt carefully
+- If the receipt shows "Date: 29/04/2026", return "29/04/2026"
+- Do not guess the month
+- If the month is unclear, return an empty string instead of guessing`
+
               },
               {
                 type: "image_url",
