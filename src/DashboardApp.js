@@ -261,7 +261,7 @@ useEffect(() => {
     }
 
     try {
-      setStatusMessage("I am categorising your transaction. sit tight");
+      setStatusMessage("Enyi is categorising your transaction. sit tight");
 
       if (transactionType === "income") {
         const cleanAmount = extractAmountFromText(input);
@@ -429,7 +429,7 @@ const resizeImage = (file, maxWidth = 1400, quality = 0.85) => {
     }
 
     try {
-      setReceiptStatus("I am reading your receipt...just a moment");
+      setReceiptStatus("Enyi is reading your receipt...just a moment");
 
 const compressedFile = await resizeImage(receiptFile);
 
