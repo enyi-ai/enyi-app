@@ -258,7 +258,7 @@ useEffect(() => {
     }
 
     try {
-      setStatusMessage("Processing...");
+      setStatusMessage("Enyi categorising your transaction. This may take some time");
 
       if (transactionType === "income") {
         const cleanAmount = extractAmountFromText(input);
@@ -376,7 +376,7 @@ setTimeout(() => {
     }
 
     try {
-      setReceiptStatus("Processing receipt...");
+      setReceiptStatus("Enyi is reading your receipt. First upload may take a little longer..");
 
       const formData = new FormData();
       formData.append("receipt", receiptFile);
