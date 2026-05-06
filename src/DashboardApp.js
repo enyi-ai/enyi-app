@@ -986,7 +986,7 @@ const scrollToTop = () => {
 
     <div className="brand-text">
       <h1 className="brand-name">Enyi</h1>
-      <p className="brand-tagline">Bookkeeping and tax. Sorted by AI.</p>
+      <p className="brand-tagline">Your AI finance partner</p>
     </div>
   </div>
 
