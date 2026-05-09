@@ -1025,9 +1025,9 @@ const scrollToTop = () => {
           <div className="hero-grid">
             <div className="hero-left">
               <h2 className="hero-title">
-                Your business,
+                Your money,
                 <br />
-                built intelligently.
+                organised.
               </h2>
 
               <p className="hero-subtitle">
