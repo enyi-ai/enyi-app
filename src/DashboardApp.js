@@ -1025,14 +1025,14 @@ const scrollToTop = () => {
           <div className="hero-grid">
             <div className="hero-left">
               <h2 className="hero-title">
-                Your money,
+                Your business,
                 <br />
-                organised.
+                built intelligently.
               </h2>
 
               <p className="hero-subtitle">
-                AI-powered bookkeeping and tax tracking that keeps your business
-                clear, compliant and in control.
+                Bookkeeping, tax clarity and personalised AI guidance 
+                for smarter business growth.
               </p>
             </div>
 
