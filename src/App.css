@@ -1608,24 +1608,30 @@ html, body, #root {
 
 .insight-strip {
   width: 100%;
-  background: #ffffff;
+  background: linear-gradient(
+    to right,
+    rgba(47, 225, 194, 0.04) 0%,
+    #ffffff 30%
+  );
   border: 1px solid #e8edf5;
+  border-left: 4px solid #2fe1c2;
   border-radius: 24px;
-  padding: 22px 28px;
+  padding: 24px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   margin: 28px 0 6px 0;
   box-shadow:
-    0 4px 16px rgba(9, 17, 31, 0.06),
+    0 4px 16px rgba(9, 17, 31, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: all 0.25s ease;
 }
 
 .insight-strip:hover {
-  border-color: #dde4ec;
-  box-shadow: 0 8px 24px rgba(9, 17, 31, 0.08);
+  border-color: #c8d8e8;
+  border-left-color: #2fe1c2;
+  box-shadow: 0 8px 28px rgba(9, 17, 31, 0.08);
   transform: translateY(-1px);
 }
 
@@ -1633,12 +1639,13 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 18px;
+  flex: 1;
 }
 
 .insight-ai-badge {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #2fe1c2 0%, #3b82f6 100%);
   border: none;
   display: flex;
@@ -1649,11 +1656,13 @@ html, body, #root {
   color: #ffffff;
   letter-spacing: 0.02em;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(47, 225, 194, 0.35);
+  box-shadow:
+    0 4px 14px rgba(47, 225, 194, 0.35),
+    0 2px 6px rgba(59, 130, 246, 0.2);
 }
 
 .insight-copy h3 {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.4px;
   color: #09111f;
@@ -1661,35 +1670,38 @@ html, body, #root {
 }
 
 .insight-copy p {
-  font-size: 13px;
+  font-size: 14px;
   color: #6b7280;
   margin: 0;
   font-weight: 500;
 }
 
 .insight-expand-button {
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #09111f;
-  padding: 11px 20px;
-  border-radius: 12px;
-  font-size: 13px;
+  background: #09111f;
+  color: #ffffff;
+  border: none;
+  padding: 13px 28px;
+  border-radius: 14px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
   letter-spacing: 0.01em;
+  box-shadow: 0 4px 12px rgba(9, 17, 31, 0.14);
 }
 
 .insight-expand-button:hover {
-  background: #eef2f7;
-  border-color: #cbd5e1;
+  background: #1a2744;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(9, 17, 31, 0.22);
 }
 
 /* ── EXPANDED CARD ── */
 .insight-expanded-card {
   background: #ffffff;
   border: 1px solid #e8edf5;
+  border-left: 4px solid #2fe1c2;
   border-radius: 24px;
   padding: 0;
   margin-bottom: 28px;
@@ -1705,9 +1717,9 @@ html, body, #root {
   align-items: flex-start;
   gap: 14px;
   margin: 0;
-  padding: 18px 24px;
+  padding: 18px 28px;
   font-size: 15px;
-  line-height: 1.65;
+  line-height: 1.7;
   color: #1e293b;
   border-bottom: 1px solid #f1f5f9;
   transition: background 0.15s ease;
@@ -1721,26 +1733,32 @@ html, body, #root {
   background: #fafbfd;
 }
 
+/* Income — blue */
 .insight-expanded-card p:nth-child(1) {
   border-left: 3px solid #3b82f6;
 }
 
+/* Expenses — purple */
 .insight-expanded-card p:nth-child(2) {
   border-left: 3px solid #8b5cf6;
 }
 
+/* Top category — sky */
 .insight-expanded-card p:nth-child(3) {
   border-left: 3px solid #0ea5e9;
 }
 
+/* Second category — indigo */
 .insight-expanded-card p:nth-child(4) {
   border-left: 3px solid #6366f1;
 }
 
+/* Profit margin — green */
 .insight-expanded-card p:nth-child(5) {
   border-left: 3px solid #10b981;
 }
 
+/* VAT warning — amber */
 .insight-expanded-card p:nth-child(6) {
   border-left: 3px solid #f59e0b;
   background: #fffbeb;
@@ -1750,6 +1768,7 @@ html, body, #root {
   background: #fef3c7;
 }
 
+/* HMRC alert — red */
 .insight-expanded-card p:nth-child(7) {
   border-left: 3px solid #ef4444;
   background: #fff5f5;
@@ -1759,6 +1778,7 @@ html, body, #root {
   background: #fee2e2;
 }
 
+/* Tax pot action — teal */
 .insight-expanded-card p:nth-child(8) {
   border-left: 3px solid #2fe1c2;
   background: #f0fdf9;
@@ -1779,6 +1799,7 @@ html, body, #root {
   }
 }
 
+/* ── MOBILE ── */
 @media (max-width: 768px) {
   .insight-strip {
     flex-direction: row;
@@ -1786,6 +1807,7 @@ html, body, #root {
     justify-content: space-between;
     padding: 18px 20px;
     gap: 14px;
+    border-radius: 20px;
   }
 
   .insight-strip-left {
@@ -1794,19 +1816,20 @@ html, body, #root {
   }
 
   .insight-ai-badge {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
     font-size: 9px;
   }
 
   .insight-copy h3 {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 800;
   }
 
   .insight-copy p {
     font-size: 12px;
+    line-height: 1.4;
   }
 
   .insight-expand-button {
@@ -1814,16 +1837,17 @@ html, body, #root {
     min-width: 64px;
     text-align: center;
     padding: 10px 16px;
-    background: #09111f;
-    color: #ffffff;
-    border: none;
-    border-radius: 12px;
     font-size: 13px;
-    font-weight: 700;
+    border-radius: 12px;
   }
 
-  .insight-expand-button:hover {
-    background: #1a2744;
-    border: none;
+  .insight-expanded-card {
+    border-radius: 20px;
+  }
+
+  .insight-expanded-card p {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
   }
 }
