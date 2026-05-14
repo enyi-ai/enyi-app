@@ -12,7 +12,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import "./App.css";
 import logoIcon from "./assets/enyi-icon.png";
 import AIChatPanel from "./components/AIChatPanel";
@@ -62,7 +62,12 @@ function App() {
 
 
 
-  const [transactions, setTransactions] = useState([]);
+const [transactions, setTransactions] = useState([]);
+
+const [, setInsights] = useState([]);
+
+const [showInsight, setShowInsight] = useState(false);
+
   useEffect(() => {
   const unsubscribe = auth.onAuthStateChanged((user) => {
     setCurrentUser(user);
@@ -666,6 +671,7 @@ const monthlyExpenses = monthlyTransactions
 
 const monthlyProfit = monthlyIncome - monthlyExpenses;
 
+
 const filteredHistoryTransactions = financialYearTransactions
   .slice()
   .sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -750,6 +756,138 @@ const otherAnnualIncome = otherIncomeSources.reduce(
   const estimatedTotalTax = estimatedIncomeTax + estimatedClass4NI;
   const takeHome = combinedIncome - estimatedTotalTax;
   const monthlyTaxPot = estimatedTotalTax / 12;
+
+// --- CATEGORY ANALYSIS ---
+const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+const topSpendCategory = sortedCategories[0];
+const secondSpendCategory = sortedCategories[1];
+
+// --- MONTH-ON-MONTH COMPARISON ---
+const lastMonthDate = new Date();
+lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+const lastMonthTransactions = transactions.filter((t) => {
+  const d = new Date(t.date);
+  return (
+    d.getMonth() === lastMonthDate.getMonth() &&
+    d.getFullYear() === lastMonthDate.getFullYear()
+  );
+});
+const lastMonthExpenses = lastMonthTransactions
+  .filter((t) => t.type !== "income")
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+const lastMonthIncome = lastMonthTransactions
+  .filter((t) => t.type === "income")
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+const expenseChange = lastMonthExpenses > 0
+  ? Math.round(((monthlyExpenses - lastMonthExpenses) / lastMonthExpenses) * 100)
+  : null;
+const incomeChange = lastMonthIncome > 0
+  ? Math.round(((monthlyIncome - lastMonthIncome) / lastMonthIncome) * 100)
+  : null;
+
+// --- PROJECTED ANNUAL INCOME ---
+const today = new Date();
+const fyStartDate = new Date(`${selectedFinancialYear.split("/")[0]}-04-06`);
+const daysElapsed = Math.max(1, Math.floor((today - fyStartDate) / (1000 * 60 * 60 * 24)));
+const dailyIncomeRate = totalIncome / daysElapsed;
+const projectedAnnualIncome = Math.round(dailyIncomeRate * 365);
+
+// --- VAT THRESHOLD ---
+const vatThreshold = 90000;
+const vatWarning = projectedAnnualIncome >= vatThreshold * 0.85;
+
+// --- PROFIT MARGIN ---
+const profitMargin = totalIncome > 0 ? Math.round((profit / totalIncome) * 100) : 0;
+
+// --- TOP CATEGORY ANNUALISED ---
+const topCatAnnualised = topSpendCategory
+  ? Math.round((topSpendCategory[1] / daysElapsed) * 365)
+  : 0;
+
+// --- NON-ALLOWABLE CATEGORY FLAGS ---
+const nonAllowableCategories = ["Groceries", "Mortgage", "Clothing", "Shopping"];
+const flaggedCategories = sortedCategories.filter(([cat]) =>
+  nonAllowableCategories.includes(cat)
+);
+
+// --- BUILD NARRATIVE ---
+const narrativeParts = [];
+
+// 1. Opening — month-on-month income trend
+if (incomeChange !== null) {
+  const incomeDirection = incomeChange >= 0 ? "up" : "down";
+  const incomeAbs = Math.abs(incomeChange);
+  narrativeParts.push(
+    `📈 Income this month is ${formatCurrency(monthlyIncome)} — ${incomeAbs}% ${incomeDirection} compared to last month (${formatCurrency(lastMonthIncome)}).`
+  );
+} else {
+  narrativeParts.push(
+    `📈 Income this month: ${formatCurrency(monthlyIncome)}.`
+  );
+}
+
+// 2. Expense trend
+if (expenseChange !== null) {
+  const expDirection = expenseChange >= 0 ? "up" : "down";
+  const expAbs = Math.abs(expenseChange);
+  narrativeParts.push(
+    `💸 Your expenses are ${expAbs}% ${expDirection} vs last month (${formatCurrency(lastMonthExpenses)} → ${formatCurrency(monthlyExpenses)}). ${expenseChange > 15 ? "This is a significant rise — review your spending below." : ""}`
+  );
+}
+
+// 3. Top spending category with annualised projection
+if (topSpendCategory) {
+  narrativeParts.push(
+    `🔍 Your largest expense category is ${topSpendCategory[0]} at ${formatCurrency(topSpendCategory[1])} this tax year. At this rate, you are on track to spend ${formatCurrency(topCatAnnualised)} on ${topSpendCategory[0]} annually.`
+  );
+}
+
+// 4. Second category if exists
+if (secondSpendCategory) {
+  narrativeParts.push(
+    `📂 Your second largest category is ${secondSpendCategory[0]} at ${formatCurrency(secondSpendCategory[1])}.`
+  );
+}
+
+// 5. Profit margin insight
+if (totalIncome > 0) {
+  const marginComment = profitMargin >= 50
+    ? "This is a healthy margin — keep monitoring expenses."
+    : profitMargin >= 30
+    ? "Your margin is acceptable but there is room to improve."
+    : "Your profit margin is under pressure. Review your largest expense categories.";
+  narrativeParts.push(
+    `📊 Your profit margin is ${profitMargin}% (${formatCurrency(profit)} profit on ${formatCurrency(totalIncome)} income). ${marginComment}`
+  );
+}
+
+// 6. VAT warning
+if (vatWarning) {
+  narrativeParts.push(
+    `⚠️ Based on your income so far, Enyi projects you may earn ${formatCurrency(projectedAnnualIncome)} this tax year — approaching the £90,000 VAT registration threshold. Consider speaking to an accountant about VAT registration.`
+  );
+}
+
+// 7. Non-allowable expense flags
+if (flaggedCategories.length > 0) {
+  const flagList = flaggedCategories
+    .map(([cat, amt]) => `${cat} (${formatCurrency(amt)})`)
+    .join(", ");
+  narrativeParts.push(
+    `🚨 HMRC Alert: You have spending in categories that may not be fully tax-allowable: ${flagList}. Enyi recommends reviewing these before your Self Assessment.`
+  );
+}
+
+// 8. Tax pot action
+if (estimatedTotalTax > 0) {
+  narrativeParts.push(
+    `💰 Action: Set aside ${formatCurrency(monthlyTaxPot)} this month for your tax pot. Your estimated total tax liability is ${formatCurrency(estimatedTotalTax)}.`
+  );
+}
+
+const financialNarrative = narrativeParts.join("\n\n");
+
 const groupedHistoryTransactions = filteredHistoryTransactions.reduce(
   (groups, transaction) => {
     const date = new Date(transaction.date);
@@ -967,12 +1105,106 @@ const handleSignOut = async () => {
     console.error(error);
   }
 };
+
+const generateInsights = useCallback(() => {
+
+
+  if (transactions.length === 0) {
+    setInsights([]);
+    return;
+  }
+
+  const generated = [];
+
+  // CURRENT MONTH TRANSACTIONS
+  const now = new Date();
+
+  const thisMonthTransactions = transactions.filter((t) => {
+    const d = new Date(t.date);
+
+    return (
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
+  });
+
+  // EXPENSES ONLY
+  const expenseTransactions = thisMonthTransactions.filter(
+    (t) => t.type !== "income"
+  );
+
+  // CATEGORY TOTALS
+  const monthlyCategoryTotals = {};
+
+  expenseTransactions.forEach((t) => {
+    const cat = t.category || "Misc";
+
+    monthlyCategoryTotals[cat] =
+      (monthlyCategoryTotals[cat] || 0) + Number(t.amount);
+  });
+
+  // TOP SPENDING CATEGORY
+  const topCategory = Object.entries(monthlyCategoryTotals).sort(
+    (a, b) => b[1] - a[1]
+  )[0];
+
+  if (topCategory) {
+    generated.push({
+      type: "spending",
+      title: "Spending Insight",
+      message: `${topCategory[0]} spending is £${topCategory[1].toFixed(
+        2
+      )} this month. Review this category for recurring costs.`,
+    });
+  }
+
+  // VAT WARNING
+  if (totalIncome >= 70000) {
+    generated.push({
+      type: "vat",
+      title: "VAT Threshold Alert",
+      message: `You are on track to earn £${totalIncome.toFixed(
+        0
+      )} this tax year. You may approach the £90,000 VAT threshold soon.`,
+    });
+  }
+
+  // LOW PROFIT WARNING
+  if (profit > 0 && profit < totalIncome * 0.3) {
+    generated.push({
+      type: "profit",
+      title: "Profit Margin Alert",
+      message:
+        "Your expenses are consuming a large portion of your revenue this year.",
+    });
+  }
+
+  // MONTHLY SUMMARY
+  generated.push({
+    type: "summary",
+    title: "Monthly Summary",
+    message: `This month you earned £${monthlyIncome.toFixed(
+      2
+    )} and spent £${monthlyExpenses.toFixed(
+      2
+    )}. Net position: £${monthlyProfit.toFixed(2)}.`,
+  });
+
+ setInsights(generated);
+
+}, [transactions, totalIncome, monthlyIncome, monthlyExpenses, monthlyProfit, profit]);
+
+useEffect(() => {
+  generateInsights();
+}, [transactions, generateInsights]);
+
 const scrollToTop = () => {
   window.scrollTo({
     top: 0,
     behavior: "smooth",
   });
 };
+
 
   return (
     <div className="app-shell">
@@ -1069,7 +1301,49 @@ const scrollToTop = () => {
             <span className="overview-kicker">This month</span>
             <strong>{formatCurrency(monthlyProfit)}</strong>
           </div>
-        </section>
+          </section>
+
+<section className="insight-strip">
+
+  <div className="insight-strip-left">
+
+    <div className="insight-ai-badge">
+      Enyi AI
+    </div>
+
+    <div className="insight-copy">
+
+      <h3>Business Insight</h3>
+
+      <p>
+        Automated financial intelligence based on your recent activity
+      </p>
+
+    </div>
+
+  </div>
+
+  <button
+    className="insight-expand-button"
+    onClick={() => setShowInsight(!showInsight)}
+  >
+    {showInsight ? "Hide" : "View"}
+  </button>
+
+</section>
+
+{showInsight && (
+  <div className="insight-expanded-card">
+    {financialNarrative.split("\n\n").map((point, index) => (
+      <p key={index} style={{ marginBottom: "12px", lineHeight: "1.6" }}>
+        {point}
+      </p>
+    ))}
+  </div>
+)}
+
+
+
 
         <section className="top-grid">
   <div id="add-transaction" className="fin-card">
