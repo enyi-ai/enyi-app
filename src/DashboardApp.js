@@ -790,12 +790,8 @@ const incomeChange = lastMonthIncome > 0
 const today = new Date();
 const fyStartDate = new Date(`${selectedFinancialYear.split("/")[0]}-04-06`);
 const daysElapsed = Math.max(1, Math.floor((today - fyStartDate) / (1000 * 60 * 60 * 24)));
-const dailyIncomeRate = totalIncome / daysElapsed;
-const projectedAnnualIncome = Math.round(dailyIncomeRate * 365);
 
-// --- VAT THRESHOLD ---
-const vatThreshold = 90000;
-const vatWarning = projectedAnnualIncome >= vatThreshold * 0.85;
+
 
 // --- PROFIT MARGIN ---
 const profitMargin = totalIncome > 0 ? Math.round((profit / totalIncome) * 100) : 0;
@@ -862,12 +858,35 @@ if (totalIncome > 0) {
   );
 }
 
-// 6. VAT warning
-if (vatWarning) {
+// 6. VAT — rolling 12-month rule
+const today12m = new Date();
+const twelveMonthsAgo = new Date();
+twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+const rolling12mIncome = transactions
+  .filter(t => {
+    const d = new Date(t.date);
+    return (
+      t.type === "income" &&
+      d >= twelveMonthsAgo &&
+      d <= today12m
+    );
+  })
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+const vatExceeded = rolling12mIncome >= 90000;
+const vatApproaching = rolling12mIncome >= 76500 && !vatExceeded;
+
+if (vatExceeded) {
   narrativeParts.push(
-    `⚠️ Based on your income so far, Enyi projects you may earn ${formatCurrency(projectedAnnualIncome)} this tax year — approaching the £90,000 VAT registration threshold. Consider speaking to an accountant about VAT registration.`
+    `🚨 VAT Registration Required: Your taxable turnover in the last 12 months is ${formatCurrency(rolling12mIncome)} — you have exceeded the £90,000 VAT threshold. You must register for VAT with HMRC immediately. Failure to register on time may result in penalties.`
+  );
+} else if (vatApproaching) {
+  narrativeParts.push(
+    `⚠️ VAT Warning: Your taxable turnover in the last 12 months is ${formatCurrency(rolling12mIncome)} — you are approaching the £90,000 VAT registration threshold. Monitor your income closely and prepare to register if you exceed £90,000 in any rolling 12-month period.`
   );
 }
+
 
 // 7. Non-allowable expense flags
 if (flaggedCategories.length > 0) {
