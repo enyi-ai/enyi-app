@@ -2,8 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 require("dotenv").config();
-const OpenAI = require("openai");   // 👈 ADD THIS
-const openai = new OpenAI({         // 👈 ADD THIS
+const OpenAI = require("openai");
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
@@ -23,20 +23,15 @@ app.get("/api/health", (req, res) => {
 function extractJson(text) {
   if (!text) return null;
 
-  // Remove ```json ... ``` fences if present
   const cleaned = text
     .replace(/```json/gi, "")
     .replace(/```/g, "")
     .trim();
 
-  // Try full parse first
   try {
     return JSON.parse(cleaned);
-  } catch (e) {
-    // Continue
-  }
+  } catch (e) {}
 
-  // Try to extract first JSON object from the text
   const firstBrace = cleaned.indexOf("{");
   const lastBrace = cleaned.lastIndexOf("}");
 
@@ -52,6 +47,7 @@ function extractJson(text) {
   return null;
 }
 
+// ── RECEIPT PARSE ─────────────────────────────────────────
 app.post("/api/receipt/parse", upload.single("receipt"), async (req, res) => {
   try {
     if (!req.file) {
@@ -97,13 +93,10 @@ Rules:
 - If the receipt shows "Date: 29/04/2026", return "29/04/2026"
 - Do not guess the month
 - If the month is unclear, return an empty string instead of guessing`
-
               },
               {
                 type: "image_url",
-                image_url: {
-                  url: dataUrl
-                }
+                image_url: { url: dataUrl }
               }
             ]
           }
@@ -143,173 +136,172 @@ Rules:
   }
 });
 
-
+// ── AI CHAT ───────────────────────────────────────────────
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, selectedFinancialYear, transactions = [] } = req.body;
+    const { message, context, selectedFinancialYear, transactions = [] } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: "Message is required." });
     }
 
-    const getFinancialYearRange = (label) => {
-      const [startText, endText] = label.split("/");
-      const startYear = Number(startText);
-      const endYear = 2000 + Number(endText);
+    let financialContext;
 
-      return {
-        start: new Date(startYear, 3, 6, 0, 0, 0, 0),
-        end: new Date(endYear, 3, 5, 23, 59, 59, 999),
+    if (context) {
+      // New frontend sends structured time-aware context
+      financialContext = context;
+    } else {
+      // Fallback — safe split with default
+      const safeFY = (selectedFinancialYear && selectedFinancialYear.includes("/"))
+        ? selectedFinancialYear
+        : "2026/27";
+
+      const parts = safeFY.split("/");
+      const startYear = Number(parts[0]);
+      const endYear = 2000 + Number(parts[1]);
+
+      const fyStart = new Date(startYear, 3, 6, 0, 0, 0, 0);
+      const fyEnd = new Date(endYear, 3, 5, 23, 59, 59, 999);
+
+      const yearTransactions = transactions.filter(t => {
+        const d = new Date(t.date);
+        return d >= fyStart && d <= fyEnd;
+      });
+
+      const income = yearTransactions
+        .filter(t => t.type === "income")
+        .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+      const expenses = yearTransactions
+        .filter(t => t.type !== "income")
+        .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+      financialContext = {
+        selectedFinancialYear: safeFY,
+        financialYear: { income, expenses, profit: income - expenses }
       };
-    };
-
-    const yearRange = getFinancialYearRange(selectedFinancialYear);
-
-    const yearTransactions = transactions.filter((t) => {
-      const d = new Date(t.date);
-      return d >= yearRange.start && d <= yearRange.end;
-    });
-
-    const income = yearTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-
-    const expenses = yearTransactions
-      .filter((t) => t.type !== "income")
-      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-
-    const profit = income - expenses;
-    const profitMargin = income > 0 ? (profit / income) * 100 : 0;
-
-    const incomeTransactions = yearTransactions.filter((t) => t.type === "income");
-    const expenseTransactions = yearTransactions.filter((t) => t.type !== "income");
-
-    // Group expenses by category
-    const categoryTotals = {};
-    expenseTransactions.forEach((t) => {
-      const category = t.category || "Other";
-      categoryTotals[category] = (categoryTotals[category] || 0) + Number(t.amount);
-    });
-
-    // Top 3 expense categories
-    const topExpenseCategories = Object.entries(categoryTotals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([category, amount]) => ({
-        category,
-        amount: Number(amount.toFixed(2)),
-      }));
-
-    const biggestExpenseCategory =
-      topExpenseCategories.length > 0 ? topExpenseCategories[0] : null;
-
-    const keyInsight = biggestExpenseCategory
-      ? `${biggestExpenseCategory.category} is your largest expense category at £${biggestExpenseCategory.amount}.`
-      : "You do not yet have enough expense data to identify a main spending category.";
-
-    const financialContext = {
-      selectedFinancialYear,
-      income,
-      expenses,
-      profit,
-      profitMargin: Number(profitMargin.toFixed(1)),
-      transactionCount: yearTransactions.length,
-      incomeTransactionCount: incomeTransactions.length,
-      expenseTransactionCount: expenseTransactions.length,
-      averageTransactionValue:
-        yearTransactions.length > 0
-          ? Number(((income + expenses) / yearTransactions.length).toFixed(2))
-          : 0,
-      topExpenseCategories,
-      recentTransactions: yearTransactions.slice(-5).map((t) => ({
-        amount: t.amount,
-        category: t.category,
-        date: t.date,
-      })),
-      keyInsight,
-    };
-
-
-  const response = await openai.responses.create({
-  model: "gpt-4o-mini",
-  input: [
-    {
-      role: "system",
-      content: `
-You are Enyi AI, a premium finance copilot for UK sole traders.
-
-PRIMARY RULE:
-Answer the user’s exact question first. Do not force a financial health check, spending review, tax advice, or growth advice unless the user asks for it.
-
-Your job is to be useful in two modes:
-
-1. Direct answer mode:
-If the user asks a specific question, answer that specific question using the provided financial data only.
-
-2. Advisory mode:
-If the user asks for health check, spending review, tax optimisation, growth advice, or general advice, identify what matters, what looks inefficient, and what they should do next.
-
-Voice:
-- Sharp, calm, confident
-- Human and natural
-- Concise, never fluffy
-- Sounds like a paid advisor, not a chatbot
-
-Rules:
-- Use only the provided financial data
-- Do not invent figures
-- If the data is thin, say so briefly
-- If the user asks for a year, focus only on that financial year
-- Keep answers short and useful
-- Avoid numbering sections like 1, 2, 3
-- If the user asks about their own business finances, use the provided Enyi data.
-- if the user asks a general finance /business question, answer generally, and ignore the Enyi Financial data.
-- if the question is unrelated to finance, business, tax, bookkeeping, or money, say: "I can only help with finance and business questions inside Enyi."
-
-
-
-
-Preferred style:
-- Start with the direct answer
-- Then explain the reason
-- End with one clear action
-- If relevant, point out the single biggest spending issue
-
-Good example:
-"Your biggest issue is visibility, not profitability. An 81% margin is strong, but too much of your spending sits in Misc, which makes it harder to control.
-
-That means your numbers look healthy, but you may be hiding waste inside poorly labelled expenses.
-
-Next move: review Misc line by line and reclassify recurring costs first."
-
-      `
-    },
-
-    {
-      role: "user",
-      content: `
-User question: ${message}
-
-Selected financial year: ${selectedFinancialYear}
-
-User's Enyi financial data:
-${JSON.stringify(financialContext, null, 2)}
-      `
     }
-  ]
-});
+
+    // ── FORMAT CONTEXT FOR PROMPT ──
+    const formatCurrency = (n) =>
+      `£${Number(n || 0).toLocaleString("en-GB", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
+
+    const tm = financialContext.thisMonth || {};
+    const lm = financialContext.lastMonthSummary || {};
+    const fy = financialContext.financialYear || {};
+    const flagged = financialContext.flaggedNonAllowableSpend || {};
+    const vatStatus = financialContext.vatStatus || "SAFE";
+    const rolling12m = financialContext.rolling12mIncome || 0;
+
+    const contextSummary = `
+TODAY'S DATE: ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+FINANCIAL YEAR: ${financialContext.selectedFinancialYear || ""}
+CURRENT MONTH: ${financialContext.currentMonth || ""}
+LAST MONTH: ${financialContext.lastMonth || ""}
+
+THIS MONTH (${financialContext.currentMonth || "current month"}):
+- Income: ${formatCurrency(tm.income)}
+- Expenses: ${formatCurrency(tm.expenses)}
+- Profit: ${formatCurrency(tm.profit)}
+- Profit margin: ${tm.profitMargin || 0}%
+- Transactions: ${tm.transactionCount || 0}
+- Top spending categories: ${Object.entries(tm.categoryTotals || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c, a]) => `${c} (${formatCurrency(a)})`).join(", ") || "none"}
+
+LAST MONTH (${financialContext.lastMonth || "last month"}):
+- Income: ${formatCurrency(lm.income)}
+- Expenses: ${formatCurrency(lm.expenses)}
+- Profit: ${formatCurrency(lm.profit)}
+- Profit margin: ${lm.profitMargin || 0}%
+
+FINANCIAL YEAR TO DATE (${financialContext.selectedFinancialYear || ""}):
+- Income: ${formatCurrency(fy.income)}
+- Expenses: ${formatCurrency(fy.expenses)}
+- Profit: ${formatCurrency(fy.profit)}
+- Profit margin: ${fy.profitMargin || 0}%
+- Transactions: ${fy.transactionCount || 0}
+- Top categories: ${Object.entries(fy.categoryTotals || {}).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, a]) => `${c} (${formatCurrency(a)})`).join(", ") || "none"}
+
+VAT STATUS:
+- Rolling 12-month income: ${formatCurrency(rolling12m)}
+- Status: ${vatStatus} ${vatStatus === "EXCEEDED" ? "— MUST REGISTER IMMEDIATELY" : vatStatus === "APPROACHING" ? "— approaching £90,000 threshold" : "— below threshold"}
+
+HMRC NON-ALLOWABLE SPEND FLAGS:
+${Object.keys(flagged).length > 0
+  ? Object.entries(flagged).map(([c, a]) => `- ${c}: ${formatCurrency(a)} (may not be tax-allowable)`).join("\n")
+  : "- No flagged categories"}
+
+TOTAL TRANSACTIONS ON RECORD: ${financialContext.totalTransactions || 0}
+`;
+
+    const systemPrompt = `
+You are Enyi AI — a sharp, warm, and deeply knowledgeable UK business finance coach for sole traders and small business owners.
+
+You have access to the user's real financial data broken down into: this month, last month, and the current financial year. You also have VAT status and HMRC compliance flags.
+
+CRITICAL RULES:
+1. ALWAYS distinguish between monthly and annual figures — never mix them up
+2. When the user asks about "this month", use ONLY the THIS MONTH data
+3. When the user asks about "this year" or the financial year, use FINANCIAL YEAR data
+4. Use the user's ACTUAL numbers — never estimate or invent figures
+5. If a figure is zero or missing, acknowledge it honestly
+6. End EVERY response with one specific follow-up coaching question or next action
+7. Never number your sections (no 1. 2. 3.)
+8. Keep responses concise — 3 to 5 short paragraphs maximum
+
+YOUR VOICE:
+- Confident and direct, like a trusted accountant friend
+- Warm but never fluffy
+- Use plain English — no jargon
+- Never sound like a corporate report
+
+COACHING BEHAVIOUR:
+- Spot patterns the user hasn't noticed
+- Challenge assumptions gently
+- Flag HMRC risks proactively using UK tax rules
+- Always give one specific, actionable next step with a real number
+- If VAT status is EXCEEDED, make this urgent and clear
+- If non-allowable spend is flagged, explain the HMRC implication
+
+TOPIC BOUNDARIES:
+- Finance, business, tax, money questions: answer fully
+- Unrelated topics: say "I focus on finance and business — happy to help with anything in that space."
+
+RESPONSE FORMAT:
+- Start with the direct answer
+- Add context from real data
+- End with a coaching question that moves them forward
+`;
+
+    // ── OPENAI CALL ──
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: `User question: "${message}"\n\n${contextSummary}`
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 600
+    });
 
     res.json({
-      reply:
-        response.output_text ||
-        "Sorry, I could not generate a reply."
+      reply: response.choices[0]?.message?.content || "Sorry, I could not generate a reply."
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("Chat error:", error);
     res.status(500).json({ error: "Could not generate AI reply." });
   }
 });
+
+// ── CATEGORISE EXPENSE ────────────────────────────────────
 app.post("/api/categorise-expense", async (req, res) => {
   try {
     const { text } = req.body;
@@ -345,7 +337,6 @@ Return EXACTLY in this JSON format:
     });
 
     const textOutput = response.output_text || "";
-
     const cleaned = textOutput
       .replace(/```json/gi, "")
       .replace(/```/g, "")
@@ -359,11 +350,12 @@ Return EXACTLY in this JSON format:
     });
   } catch (error) {
     console.error("Categorise expense error:", error);
-    return res
-      .status(500)
-      .json({ error: error.message || "Could not categorise expense." });
+    return res.status(500).json({
+      error: error.message || "Could not categorise expense."
+    });
   }
 });
+
 app.listen(4000, () => {
   console.log("Server running on port 4000");
 });
