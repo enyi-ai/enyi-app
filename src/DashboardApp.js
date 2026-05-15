@@ -17,12 +17,14 @@ import "./App.css";
 import logoIcon from "./assets/enyi-icon.png";
 import AIChatPanel from "./components/AIChatPanel";
 import { FiMenu } from "react-icons/fi";
+import HMRCFlagModal from "./components/HMRCFlagModal";
+import { shouldFlag, getCategoryAllowability } from "./hmrcRules";
+import "./components/HMRCFlagModal.css";
 
 function getCurrentFinancialYear() {
   const today = new Date();
   const year = today.getFullYear();
-  const taxYearStart = new Date(year, 3, 6); // 6 April
-
+  const taxYearStart = new Date(year, 3, 6);
   if (today >= taxYearStart) {
     return `${year}/${String(year + 1).slice(-2)}`;
   } else {
@@ -39,8 +41,8 @@ function App() {
   const [otherIncomeSources, setOtherIncomeSources] = useState([]);
   const [transactionType, setTransactionType] = useState("expense");
   const [transactionDate, setTransactionDate] = useState(
-  new Date().toISOString().split("T")[0]
-);
+    new Date().toISOString().split("T")[0]
+  );
   const [statusMessage, setStatusMessage] = useState("");
   const [transactionSuccessMessage, setTransactionSuccessMessage] = useState("");
   const [receiptSuccessMessage, setReceiptSuccessMessage] = useState("");
@@ -49,7 +51,7 @@ function App() {
   const [csvStartDate, setCsvStartDate] = useState("");
   const [csvEndDate, setCsvEndDate] = useState("");
   const [showBackToTop, setShowBackToTop] = useState(false);
-
+  const [hmrcFlagTransaction, setHmrcFlagTransaction] = useState(null);
   const [receiptStatus, setReceiptStatus] = useState("");
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
@@ -60,25 +62,32 @@ function App() {
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  const [transactions, setTransactions] = useState([]);
+  const [, setInsights] = useState([]);
+  const [showInsight, setShowInsight] = useState(false);
 
+  const [expandedCategories, setExpandedCategories] = useState({
+  always: true,
+  conditional: false,
+  never: false
+});
 
-const [transactions, setTransactions] = useState([]);
+const toggleCategorySection = (section) => {
+  setExpandedCategories(prev => ({ ...prev, [section]: !prev[section] }));
+};
 
-const [, setInsights] = useState([]);
-
-const [showInsight, setShowInsight] = useState(false);
 
   useEffect(() => {
-  const unsubscribe = auth.onAuthStateChanged((user) => {
-    setCurrentUser(user);
-  });
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
-  return () => unsubscribe();
-}, []);
-useEffect(() => {
-  fetch(`${process.env.REACT_APP_API_BASE_URL}/api/health`)
-    .catch(() => {});
-}, []);
+  useEffect(() => {
+    fetch(`${process.env.REACT_APP_API_BASE_URL}/api/health`).catch(() => {});
+  }, []);
+
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({
     text: "",
@@ -87,91 +96,59 @@ useEffect(() => {
     date: "",
     type: "expense"
   });
+
   const scrollToSection = (id) => {
-  document.getElementById(id)?.scrollIntoView({
-    behavior: "smooth",
-    block: "start",
-  });
-
-  setMenuOpen(false);
-};
-
-const normalizeCategory = (category, text = "") => {
-  const value = `${category} ${text}`.toLowerCase();
-
-  if (
-    value.includes("fuel") ||
-    value.includes("petrol") ||
-    value.includes("diesel")
-  ) {
-    return "Fuel";
-  }
-
-if (
-  value.includes("uber") ||
-  value.includes("taxi") ||
-  value.includes("train") ||
-  value.includes("bus") ||
-  value.includes("flight") ||
-  value.includes("plane") ||
-  value.includes("transport")
-) {
-  return "Travel";
-}
-if (value.includes("mortgage")) return "Mortgage";
-if (value.includes("rent")) return "Rent";
-if (value.includes("groceries")) return "Groceries";
-if (value.includes("restaurant")) return "Food";
-if (value.includes("tesco")) return "Groceries";
-if (value.includes("aldi")) return "Groceries";
-if (value.includes("sainsbury")) return "Groceries";
-if (value.includes("asda")) return "Groceries";
-if (value.includes("food")) return "Food";
-if (value.includes("electric")) return "Utilities";
-if (value.includes("water")) return "Utilities";
-if (value.includes("gas")) return "Utilities";
-if (value.includes("internet")) return "Internet";
-if (value.includes("phone")) return "Phone";
-if (value.includes("insurance")) return "Insurance";
-if (value.includes("repair")) return "Car Maintenance";
-if (value.includes("service")) return "Car Maintenance";
-if (value.includes("accountant")) return "Professional fees";
-if (value.includes("legal")) return "Professional fees";
-if (value.includes("amazon")) return "Shopping";
-
-
-  return category || "Misc";
-};
-
-
-useEffect(() => {
-  const loadTransactions = async () => {
-    if (!currentUser) {
-      setTransactions([]);
-      return;
-    }
-
-    try {
-      const q = query(
-        collection(db, "users", currentUser.uid, "transactions"),
-        orderBy("createdAt", "desc")
-      );
-
-      const snapshot = await getDocs(q);
-
-    const items = snapshot.docs.map((docSnap) => ({
-  ...docSnap.data(),
-  id: docSnap.id,
-}));
-
-      setTransactions(items);
-    } catch (error) {
-      console.error("Failed to load transactions:", error);
-    }
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setMenuOpen(false);
   };
 
-  loadTransactions();
-}, [currentUser]);
+  const normalizeCategory = (category, text = "") => {
+    const value = `${category} ${text}`.toLowerCase();
+    if (value.includes("fuel") || value.includes("petrol") || value.includes("diesel")) return "Fuel";
+    if (value.includes("uber") || value.includes("taxi") || value.includes("train") ||
+        value.includes("bus") || value.includes("flight") || value.includes("plane") ||
+        value.includes("transport")) return "Travel";
+    if (value.includes("mortgage")) return "Mortgage";
+    if (value.includes("rent")) return "Rent";
+    if (value.includes("groceries") || value.includes("tesco") || value.includes("aldi") ||
+        value.includes("sainsbury") || value.includes("asda") || value.includes("lidl")) return "Groceries";
+    if (value.includes("restaurant") || value.includes("food") || value.includes("cafe")) return "Food";
+    if (value.includes("electric") || value.includes("water") || value.includes("gas") ||
+        value.includes("utilities")) return "Utilities";
+    if (value.includes("internet") || value.includes("broadband")) return "Phone";
+    if (value.includes("phone") || value.includes("mobile")) return "Phone";
+    if (value.includes("insurance")) return "Insurance";
+    if (value.includes("repair") || value.includes("service") || value.includes("mot")) return "Travel";
+    if (value.includes("accountant") || value.includes("legal") || value.includes("solicitor")) return "Professional fees";
+    if (value.includes("software") || value.includes("subscription") || value.includes("saas")) return "Software";
+    if (value.includes("marketing") || value.includes("advertising")) return "Marketing";
+    if (value.includes("training") || value.includes("course") || value.includes("cpd")) return "Training";
+    if (value.includes("amazon") || value.includes("shopping")) return "Office";
+    if (value.includes("clothing") || value.includes("uniform")) return "Clothing";
+    if (value.includes("entertainment") || value.includes("client meal")) return "Entertainment";
+    return category || "Misc";
+  };
+
+  useEffect(() => {
+    const loadTransactions = async () => {
+      if (!currentUser) { setTransactions([]); return; }
+      try {
+        const q = query(
+          collection(db, "users", currentUser.uid, "transactions"),
+          orderBy("createdAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        const items = snapshot.docs.map((docSnap) => ({
+          ...docSnap.data(),
+          id: docSnap.id,
+        }));
+        setTransactions(items);
+      } catch (error) {
+        console.error("Failed to load transactions:", error);
+      }
+    };
+    loadTransactions();
+  }, [currentUser]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-GB", {
@@ -195,230 +172,235 @@ useEffect(() => {
     setReceiptPreview(null);
     setShowReceiptReview(false);
     setReceiptStatus("");
-
     if (cameraInputRef.current) cameraInputRef.current.value = "";
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-useEffect(() => {
-  if (!currentUser) return;
+  useEffect(() => {
+    if (!currentUser) return;
+    const INACTIVITY_LIMIT = 3 * 60 * 1000;
+    let timer;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        await auth.signOut();
+        setCurrentUser(null);
+      }, INACTIVITY_LIMIT);
+    };
+    const events = ["mousemove", "keydown", "click", "touchstart"];
+    events.forEach((event) => window.addEventListener(event, resetTimer));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((event) => window.removeEventListener(event, resetTimer));
+    };
+  }, [currentUser]);
 
-  const INACTIVITY_LIMIT = 3 * 60 * 1000; // 3 minutes
-  let timer;
-
-  const resetTimer = () => {
-    clearTimeout(timer);
-    timer = setTimeout(async () => {
-      await auth.signOut();
-      setCurrentUser(null);
-    }, INACTIVITY_LIMIT);
-  };
-
-const events = ["mousemove", "keydown", "click", "touchstart"];
-
-  events.forEach((event) => window.addEventListener(event, resetTimer));
-
-  resetTimer();
-
-  return () => {
-    clearTimeout(timer);
-    events.forEach((event) => window.removeEventListener(event, resetTimer));
-  };
-}, [currentUser]);
-
-useEffect(() => {
-  const handleScroll = () => {
-    setShowBackToTop(window.scrollY > 300);
-  };
-
-  window.addEventListener("scroll", handleScroll);
-
-  return () => window.removeEventListener("scroll", handleScroll);
-}, []);
+  useEffect(() => {
+    const handleScroll = () => setShowBackToTop(window.scrollY > 300);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const getCategoryColor = (category) => {
     const key = (category || "").toLowerCase();
     if (key === "food") return "chip-food";
     if (key === "travel") return "chip-travel";
+    if (key === "fuel") return "chip-travel";
     if (key === "utilities") return "chip-utilities";
     if (key === "rent") return "chip-rent";
     if (key === "income") return "chip-income";
+    if (key === "personal") return "chip-personal";
+    if (key === "groceries") return "chip-never";
+    if (key === "mortgage") return "chip-never";
+    if (key === "entertainment") return "chip-never";
+    if (key === "clothing") return "chip-conditional";
     return "chip-misc";
   };
-  const getFinancialYearRange = (taxYearLabel) => {
-  const [startYearStr, endYearShort] = taxYearLabel.split("/");
-  const startYear = parseInt(startYearStr, 10);
-  const endYear = 2000 + parseInt(endYearShort, 10);
 
-  return {
-    start: new Date(`${startYear}-04-06T00:00:00`),
-    end: new Date(`${endYear}-04-05T23:59:59`)
+  const getFinancialYearRange = (taxYearLabel) => {
+    const [startYearStr, endYearShort] = taxYearLabel.split("/");
+    const startYear = parseInt(startYearStr, 10);
+    const endYear = 2000 + parseInt(endYearShort, 10);
+    return {
+      start: new Date(`${startYear}-04-06T00:00:00`),
+      end: new Date(`${endYear}-04-05T23:59:59`)
+    };
   };
-};
+
+  // ── HMRC HANDLERS ──
+  const handleHmrcOverride = async (transactionId, reason) => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(
+        doc(db, "users", currentUser.uid, "transactions", transactionId),
+        { hmrcStatus: "overridden", hmrcOverrideReason: reason }
+      );
+      setTransactions(prev =>
+        prev.map(t =>
+          t.id === transactionId
+            ? { ...t, hmrcStatus: "overridden", hmrcOverrideReason: reason }
+            : t
+        )
+      );
+    } catch (error) {
+      console.error("Failed to save override:", error);
+    }
+    setHmrcFlagTransaction(null);
+  };
+
+  const handleHmrcRecategorise = async (transactionId, newCategory) => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(
+        doc(db, "users", currentUser.uid, "transactions", transactionId),
+        { category: newCategory, hmrcStatus: "recategorised" }
+      );
+      setTransactions(prev =>
+        prev.map(t =>
+          t.id === transactionId
+            ? { ...t, category: newCategory, hmrcStatus: "recategorised" }
+            : t
+        )
+      );
+    } catch (error) {
+      console.error("Failed to recategorise:", error);
+    }
+    setHmrcFlagTransaction(null);
+  };
+
+  const handleHmrcMarkPersonal = async (transactionId) => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(
+        doc(db, "users", currentUser.uid, "transactions", transactionId),
+        { category: "Personal", hmrcStatus: "personal" }
+      );
+      setTransactions(prev =>
+        prev.map(t =>
+          t.id === transactionId
+            ? { ...t, category: "Personal", hmrcStatus: "personal" }
+            : t
+        )
+      );
+    } catch (error) {
+      console.error("Failed to mark as personal:", error);
+    }
+    setHmrcFlagTransaction(null);
+  };
+
+  const handleHmrcDismiss = () => setHmrcFlagTransaction(null);
 
   const addTransaction = async () => {
     setStatusMessage("");
     setTransactionSuccessMessage("");
-
-    if (!input.trim()) {
-      setStatusMessage("Please enter a transaction.");
-      return;
-    }
+    if (!input.trim()) { setStatusMessage("Please enter a transaction."); return; }
 
     try {
       setStatusMessage("Enyi is categorising your transaction. sit tight");
 
       if (transactionType === "income") {
         const cleanAmount = extractAmountFromText(input);
-
         const newTransaction = {
           id: Date.now(),
           text: input,
           category: "Income",
           amount: cleanAmount,
-         date: new Date(transactionDate).toISOString(),
+          date: new Date(transactionDate).toISOString(),
           type: "income"
         };
-
         if (!currentUser) return;
-
-const firestoreTransaction = {
-  ...newTransaction,
-  createdAt: serverTimestamp(),
-};
-
-const docRef = await addDoc(
-  collection(db, "users", currentUser.uid, "transactions"),
-  firestoreTransaction
-);
-
-setTransactions((prev) => [
-  { id: docRef.id, ...newTransaction },
-  ...prev,
-]);
-
+        const firestoreTransaction = { ...newTransaction, createdAt: serverTimestamp() };
+        const docRef = await addDoc(
+          collection(db, "users", currentUser.uid, "transactions"),
+          firestoreTransaction
+        );
+        setTransactions((prev) => [{ id: docRef.id, ...newTransaction }, ...prev]);
         setInput("");
         setStatusMessage("");
         setTransactionDate(new Date().toISOString().split("T")[0]);
-        setTransactionSuccessMessage(
-          `Income added (${formatCurrency(cleanAmount)})`
-        );
-
-        setTimeout(() => {
-          setTransactionSuccessMessage("");
-        }, 2500);
-
+        setTransactionSuccessMessage(`Income added (${formatCurrency(cleanAmount)})`);
+        setTimeout(() => setTransactionSuccessMessage(""), 2500);
         return;
       }
 
-const response = await 
-fetch(`${process.env.REACT_APP_API_BASE_URL}/api/categorise-expense`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({ text: input })
-});
-
-const data = await response.json();
-
-if (!response.ok) {
-  throw new Error(data.error || "Could not categorise expense.");
-}
-
-const newTransaction = {
-  id: Date.now(),
-  text: input,
-  category: normalizeCategory(data.category, input),
-  amount: Number(data.amount) || 0,
-  date: new Date(transactionDate).toISOString(),
-  type: "expense"
-};
-
-if (!currentUser) return;
-
-const firestoreTransaction = {
-  ...newTransaction,
-  createdAt: serverTimestamp(),
-};
-
-const docRef = await addDoc(
-  collection(db, "users", currentUser.uid, "transactions"),
-  firestoreTransaction
-);
-
-setTransactions((prev) => [
-  { id: docRef.id, ...newTransaction },
-  ...prev,
-]);
-
-setInput("");
-setStatusMessage("");
-setTransactionDate(new Date().toISOString().split("T")[0]);
-const finalCategory = normalizeCategory(data.category, input);
-setTransactionSuccessMessage(
-  `Expense added (${finalCategory}: ${formatCurrency(Number(data.amount) || 0)})`
-);
-
-setTimeout(() => {
-  setTransactionSuccessMessage("");
-}, 2500);    
-} catch (error) {
-  console.error(error);
-  setTransactionSuccessMessage("");
-  setStatusMessage(error.message || "Something went wrong.");
-}
-  };
-const resizeImage = (file, maxWidth = 1400, quality = 0.85) => {
-  return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
-      resolve(file);
-      return;
-    }
-
-    const img = new Image();
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      img.src = e.target.result;
-    };
-
-    reader.onerror = reject;
-
-    img.onload = () => {
-      const scale = maxWidth / img.width;
-      const width = img.width > maxWidth ? maxWidth : img.width;
-      const height = img.width > maxWidth ? img.height * scale : img.height;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-
-          resolve(
-            new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
-              type: "image/jpeg",
-            })
-          );
-        },
-        "image/jpeg",
-        quality
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/categorise-expense`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: input })
+        }
       );
-    };
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not categorise expense.");
 
-    img.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
+      const finalCategory = normalizeCategory(data.category, input);
+      const newTransaction = {
+        id: Date.now(),
+        text: input,
+        category: finalCategory,
+        amount: Number(data.amount) || 0,
+        date: new Date(transactionDate).toISOString(),
+        type: "expense"
+      };
+      if (!currentUser) return;
+      const firestoreTransaction = { ...newTransaction, createdAt: serverTimestamp() };
+      const docRef = await addDoc(
+        collection(db, "users", currentUser.uid, "transactions"),
+        firestoreTransaction
+      );
+      setTransactions((prev) => [{ id: docRef.id, ...newTransaction }, ...prev]);
+      setInput("");
+      setStatusMessage("");
+      setTransactionDate(new Date().toISOString().split("T")[0]);
+      setTransactionSuccessMessage(
+        `Expense added (${finalCategory}: ${formatCurrency(Number(data.amount) || 0)})`
+      );
+      setTimeout(() => setTransactionSuccessMessage(""), 2500);
+
+      if (shouldFlag(finalCategory)) {
+        setTimeout(() => {
+          setHmrcFlagTransaction({
+            id: docRef.id,
+            text: input,
+            amount: Number(data.amount) || 0,
+            category: finalCategory
+          });
+        }, 800);
+      }
+    } catch (error) {
+      console.error(error);
+      setTransactionSuccessMessage("");
+      setStatusMessage(error.message || "Something went wrong.");
+    }
+  };
+
+  const resizeImage = (file, maxWidth = 1400, quality = 0.85) => {
+    return new Promise((resolve, reject) => {
+      if (!file.type.startsWith("image/")) { resolve(file); return; }
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (e) => { img.src = e.target.result; };
+      reader.onerror = reject;
+      img.onload = () => {
+        const scale = maxWidth / img.width;
+        const width = img.width > maxWidth ? maxWidth : img.width;
+        const height = img.width > maxWidth ? img.height * scale : img.height;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: "image/jpeg" }));
+        }, "image/jpeg", quality);
+      };
+      img.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleReceiptSelection = (file) => {
     if (!file) return;
@@ -428,32 +410,18 @@ const resizeImage = (file, maxWidth = 1400, quality = 0.85) => {
   };
 
   const handleReceiptUpload = async () => {
-    if (!receiptFile) {
-      setReceiptStatus("Please choose or take a receipt image first.");
-      return;
-    }
-
+    if (!receiptFile) { setReceiptStatus("Please choose or take a receipt image first."); return; }
     try {
       setReceiptStatus("Enyi is reading your receipt...just a moment");
-
-const compressedFile = await resizeImage(receiptFile);
-
-const formData = new FormData();
-formData.append("receipt", compressedFile);
-
-      const response = await 
-fetch(`${process.env.REACT_APP_API_BASE_URL}/api/receipt/parse`, {
-        method: "POST",
-        body: formData
-      });
-
+      const compressedFile = await resizeImage(receiptFile);
+      const formData = new FormData();
+      formData.append("receipt", compressedFile);
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/receipt/parse`,
+        { method: "POST", body: formData }
+      );
       const data = await response.json();
-
-      if (!response.ok) {
-        setReceiptStatus(`Error: ${data.error || "Could not parse receipt."}`);
-        return;
-      }
-
+      if (!response.ok) { setReceiptStatus(`Error: ${data.error || "Could not parse receipt."}`); return; }
       setReceiptPreview({
         merchant: data.merchant || "Unknown merchant",
         amount: data.amount || "0",
@@ -461,7 +429,6 @@ fetch(`${process.env.REACT_APP_API_BASE_URL}/api/receipt/parse`, {
         category: data.category || "Misc",
         notes: data.notes || ""
       });
-
       setShowReceiptReview(true);
       setReceiptStatus("Review receipt details below.");
     } catch (error) {
@@ -470,230 +437,205 @@ fetch(`${process.env.REACT_APP_API_BASE_URL}/api/receipt/parse`, {
     }
   };
 
-
-const confirmReceiptSave = async () => {
-  if (!receiptPreview) return;
-
-
-const safeDate = convertUkDateToIso(receiptPreview.date);
-
-  const newTransaction = {
-    id: Date.now(),
-    text: receiptPreview.merchant,
-    category: receiptPreview.category,
-    amount: receiptPreview.amount,
-    date: safeDate,
-    type: "expense"
+  const confirmReceiptSave = async () => {
+    if (!receiptPreview) return;
+    const safeDate = convertUkDateToIso(receiptPreview.date);
+    const newTransaction = {
+      id: Date.now(),
+      text: receiptPreview.merchant,
+      category: receiptPreview.category,
+      amount: receiptPreview.amount,
+      date: safeDate,
+      type: "expense"
+    };
+    if (!currentUser) return;
+    const firestoreTransaction = { ...newTransaction, createdAt: serverTimestamp() };
+    const docRef = await addDoc(
+      collection(db, "users", currentUser.uid, "transactions"),
+      firestoreTransaction
+    );
+    setTransactions((prev) => [{ id: docRef.id, ...newTransaction }, ...prev]);
+    showTemporaryReceiptSuccess(
+      `Receipt added: ${receiptPreview.merchant} (${formatCurrency(receiptPreview.amount)}) • Saved to ${getFinancialYearLabelFromDate(safeDate)}`
+    );
+    resetReceiptInputs();
+    if (shouldFlag(receiptPreview.category)) {
+      setTimeout(() => {
+        setHmrcFlagTransaction({
+          id: docRef.id,
+          text: receiptPreview.merchant,
+          amount: Number(receiptPreview.amount) || 0,
+          category: receiptPreview.category
+        });
+      }, 800);
+    }
   };
 
-if (!currentUser) return;
+  const cancelReceiptReview = () => resetReceiptInputs();
 
-const firestoreTransaction = {
-  ...newTransaction,
-  createdAt: serverTimestamp(),
-};
-
-const docRef = await addDoc(
-  collection(db, "users", currentUser.uid, "transactions"),
-  firestoreTransaction
-);
-
-setTransactions((prev) => [
-  { id: docRef.id, ...newTransaction },
-  ...prev,
-]);
-
-showTemporaryReceiptSuccess(
-  `Receipt added: ${receiptPreview.merchant} (${formatCurrency(
-    receiptPreview.amount
-  )}) • Saved to ${getFinancialYearLabelFromDate(safeDate)}`
-);
-  resetReceiptInputs();
-};
-
-  const cancelReceiptReview = () => {
-    resetReceiptInputs();
+  const deleteTransaction = async (id) => {
+    const confirmed = window.confirm("Delete this transaction?");
+    if (!confirmed) return;
+    if (!currentUser) return;
+    try {
+      await deleteDoc(doc(db, "users", currentUser.uid, "transactions", id));
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+    } catch (error) {
+      console.error("Failed to delete transaction:", error);
+    }
   };
 
-const deleteTransaction = async (id) => {
-  const confirmed = window.confirm("Delete this transaction?");
-  if (!confirmed) return;
+  const clearAllTransactions = async () => {
+    const confirmed = window.confirm("Are you sure you want to delete all transactions?");
+    if (!confirmed) return;
+    if (!currentUser) return;
+    try {
+      const snapshot = await getDocs(collection(db, "users", currentUser.uid, "transactions"));
+      const deletePromises = snapshot.docs.map((docSnap) =>
+        deleteDoc(doc(db, "users", currentUser.uid, "transactions", docSnap.id))
+      );
+      await Promise.all(deletePromises);
+      setTransactions([]);
+      setInput("");
+      setStatusMessage("");
+      setTransactionSuccessMessage("");
+      setReceiptSuccessMessage("");
+      resetReceiptInputs();
+    } catch (error) {
+      console.error("Failed to clear all transactions:", error);
+    }
+  };
 
-  if (!currentUser) return;
-
-  try {
-    await deleteDoc(
-      doc(db, "users", currentUser.uid, "transactions", id)
-    );
-
-    setTransactions((prev) =>
-      prev.filter((transaction) => transaction.id !== id)
-    );
-  } catch (error) {
-    console.error("Failed to delete transaction:", error);
-  }
-};
-
-const clearAllTransactions = async () => {
-  const confirmed = window.confirm(
-    "Are you sure you want to delete all transactions?"
-  );
-  if (!confirmed) return;
-
-  if (!currentUser) return;
-
-  try {
-    const snapshot = await getDocs(
-      collection(db, "users", currentUser.uid, "transactions")
-    );
-
-    const deletePromises = snapshot.docs.map((docSnap) =>
-      deleteDoc(doc(db, "users", currentUser.uid, "transactions", docSnap.id))
-    );
-
-    await Promise.all(deletePromises); // ✅ fixed
-
-    setTransactions([]);
-    setInput("");
-    setStatusMessage("");
-    setTransactionSuccessMessage("");
-    setReceiptSuccessMessage("");
-    resetReceiptInputs();
-  } catch (error) {
-    console.error("Failed to clear all transactions:", error);
-  }
-};
   const startEditing = (transaction) => {
     setEditingId(transaction.id);
     setEditForm({
       text: transaction.text,
       category: transaction.category,
       amount: transaction.amount,
-      date: transaction.date
-  ? new Date(transaction.date).toISOString().split("T")[0]
-  : "",
+      date: transaction.date ? new Date(transaction.date).toISOString().split("T")[0] : "",
       type: transaction.type || "expense"
     });
   };
 
-const saveEdit = async (id) => {
-  if (!currentUser) return;
-
-  const updatedTransaction = {
-    text: editForm.text,
-    category: editForm.category,
-    amount: Number(editForm.amount),
-    date: editForm.date,
-    type: editForm.type,
+  const saveEdit = async (id) => {
+    if (!currentUser) return;
+    const updatedTransaction = {
+      text: editForm.text,
+      category: editForm.category,
+      amount: Number(editForm.amount),
+      date: editForm.date,
+      type: editForm.type,
+    };
+    try {
+      await updateDoc(
+        doc(db, "users", currentUser.uid, "transactions", id),
+        updatedTransaction
+      );
+      setTransactions((prev) =>
+        prev.map((item) => item.id === id ? { ...item, ...updatedTransaction } : item)
+      );
+    } catch (error) {
+      console.error("Failed to update transaction:", error);
+    }
+    setEditingId(null);
+    setEditForm({ text: "", category: "", amount: "", date: "", type: "expense" });
   };
 
-  try {
-    await updateDoc(
-      doc(db, "users", currentUser.uid, "transactions", id),
-      updatedTransaction
-    );
-
-    setTransactions((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, ...updatedTransaction } : item
-      )
-    );
-  } catch (error) {
-    console.error("Failed to update transaction:", error);
-  }
-
-  setEditingId(null);
-  setEditForm({
-    text: "",
-    category: "",
-    amount: "",
-    date: "",
-    type: "expense",
-  });
-};
   const cancelEdit = () => {
     setEditingId(null);
-    setEditForm({
-      text: "",
-      category: "",
-      amount: "",
-      date: "",
-      type: "expense"
-    });
+    setEditForm({ text: "", category: "", amount: "", date: "", type: "expense" });
   };
 
-const { start: fyStart, end: fyEnd } = getFinancialYearRange(selectedFinancialYear);
-const financialYearTransactions = transactions.filter((transaction) => {
-  const transactionDate = new Date(transaction.date);
-  return transactionDate >= fyStart && transactionDate <= fyEnd;
-});
+  const { start: fyStart, end: fyEnd } = getFinancialYearRange(selectedFinancialYear);
+  const financialYearTransactions = transactions.filter((transaction) => {
+    const transactionDate = new Date(transaction.date);
+    return transactionDate >= fyStart && transactionDate <= fyEnd;
+  });
 
-const totalIncome = financialYearTransactions
-  .filter((transaction) => transaction.type === "income")
-  .reduce((sum, transaction) => sum + (parseFloat(transaction.amount) || 0), 0);
+  const totalIncome = financialYearTransactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
-const totalExpenses = financialYearTransactions
-  .filter((transaction) => transaction.type !== "income")
-  .reduce((sum, transaction) => sum + (parseFloat(transaction.amount) || 0), 0);
+  const totalExpenses = financialYearTransactions
+    .filter((t) => t.type !== "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
-const profit = totalIncome - totalExpenses;
-const businessProfit = profit;
+  // ── ALLOWABLE EXPENSES — excludes personal and never-allowable ──
+  const allowableExpenses = financialYearTransactions
+    .filter((t) => {
+      if (t.type === "income") return false;
+      if (t.hmrcStatus === "overridden") return true;
+      if (t.hmrcStatus === "personal") return false;
+      if (t.category === "Personal") return false;
+      const allowability = getCategoryAllowability(t.category);
+      return allowability !== "never";
+    })
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
-const otherIncomeTotal = otherIncomeSources.reduce(
-  (sum, item) => sum + (parseFloat(item.amount) || 0),
-  0
+  const nonAllowableExpenses = totalExpenses - allowableExpenses;
+  const profit = totalIncome - totalExpenses;
+  const taxableProfit = totalIncome - allowableExpenses;
+  const businessProfit = profit;
+
+  const otherIncomeTotal = otherIncomeSources.reduce(
+    (sum, item) => sum + (parseFloat(item.amount) || 0), 0
+  );
+  const combinedIncome = businessProfit + otherIncomeTotal;
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const monthlyTransactions = transactions.filter((t) => {
+    const d = new Date(t.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  const monthlyIncome = monthlyTransactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+  const monthlyExpenses = monthlyTransactions
+    .filter((t) => t.type !== "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+  const monthlyProfit = monthlyIncome - monthlyExpenses;
+
+  const filteredHistoryTransactions = financialYearTransactions
+    .slice()
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+ const categoryTotals = {};
+financialYearTransactions
+  .filter((t) => t.type !== "income")
+  .forEach((t) => {
+    const amount = parseFloat(t.amount) || 0;
+    if (!categoryTotals[t.category]) categoryTotals[t.category] = 0;
+    categoryTotals[t.category] += amount;
+  });
+
+// Track which categories have been overridden or marked personal
+const overriddenCategories = new Set(
+  financialYearTransactions
+    .filter(t => t.type !== "income" && t.hmrcStatus === "overridden")
+    .map(t => t.category)
 );
 
-const combinedIncome = businessProfit + otherIncomeTotal;
+const personalCategories = new Set(
+  financialYearTransactions
+    .filter(t => t.type !== "income" && (t.hmrcStatus === "personal" || t.category === "Personal"))
+    .map(t => t.category)
+);
 
-
-const now = new Date();
-const currentMonth = now.getMonth();
-const currentYear = now.getFullYear();
-
-const monthlyTransactions = transactions.filter((transaction) => {
-  const transactionDate = new Date(transaction.date);
-
-
-  return (
-    transactionDate.getMonth() === currentMonth &&
-    transactionDate.getFullYear() === currentYear
-  );
-});
-
-const monthlyIncome = monthlyTransactions
-  .filter((transaction) => transaction.type === "income")
-  .reduce((sum, transaction) => sum + (parseFloat(transaction.amount) || 0), 0);
-
-const monthlyExpenses = monthlyTransactions
-  .filter((transaction) => transaction.type !== "income")
-  .reduce((sum, transaction) => sum + (parseFloat(transaction.amount) || 0), 0);
-
-const monthlyProfit = monthlyIncome - monthlyExpenses;
-
-
-const filteredHistoryTransactions = financialYearTransactions
-  .slice()
-  .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  const categoryTotals = {};
-financialYearTransactions
-    .filter((transaction) => transaction.type !== "income")
-    .forEach((transaction) => {
-      const amount = parseFloat(transaction.amount) || 0;
-      if (!categoryTotals[transaction.category]) {
-        categoryTotals[transaction.category] = 0;
-      }
-      categoryTotals[transaction.category] += amount;
-    });
 
   const maxCategoryAmount = Math.max(...Object.values(categoryTotals), 0);
 
-const otherAnnualIncome = otherIncomeSources.reduce(
-  (sum, item) => sum + (parseFloat(item.amount) || 0),
-  0
-);
-  const estimatedProfit = Math.max(profit, 0);
+  const otherAnnualIncome = otherIncomeSources.reduce(
+    (sum, item) => sum + (parseFloat(item.amount) || 0), 0
+  );
+
+  // ── TAX USES TAXABLE PROFIT (allowable expenses only) ──
+  const estimatedProfit = Math.max(taxableProfit, 0);
   const totalTaxableSources = Math.max(estimatedProfit + otherAnnualIncome, 0);
 
   const calculatePersonalAllowance = (income) => {
@@ -709,45 +651,27 @@ const otherAnnualIncome = otherIncomeSources.reduce(
   const calculateIncomeTax = (taxable) => {
     let remaining = taxable;
     let tax = 0;
-
     const basicBand = 37700;
     const higherBandTaxableLimit = 125140 - 12570;
-
     const basicSlice = Math.min(remaining, basicBand);
     tax += basicSlice * 0.2;
     remaining -= basicSlice;
-
     if (remaining > 0) {
-      const higherSlice = Math.min(
-        remaining,
-        higherBandTaxableLimit - basicBand
-      );
+      const higherSlice = Math.min(remaining, higherBandTaxableLimit - basicBand);
       tax += higherSlice * 0.4;
       remaining -= higherSlice;
     }
-
-    if (remaining > 0) {
-      tax += remaining * 0.45;
-    }
-
+    if (remaining > 0) tax += remaining * 0.45;
     return tax;
   };
 
   const calculateClass4NI = (profits) => {
     if (profits <= 12570) return 0;
-
     let ni = 0;
     const mainBandUpper = 50270;
-
     const mainSlice = Math.min(profits, mainBandUpper) - 12570;
-    if (mainSlice > 0) {
-      ni += mainSlice * 0.06;
-    }
-
-    if (profits > mainBandUpper) {
-      ni += (profits - mainBandUpper) * 0.02;
-    }
-
+    if (mainSlice > 0) ni += mainSlice * 0.06;
+    if (profits > mainBandUpper) ni += (profits - mainBandUpper) * 0.02;
     return ni;
   };
 
@@ -757,543 +681,348 @@ const otherAnnualIncome = otherIncomeSources.reduce(
   const takeHome = combinedIncome - estimatedTotalTax;
   const monthlyTaxPot = estimatedTotalTax / 12;
 
-// --- CATEGORY ANALYSIS ---
-const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
-const topSpendCategory = sortedCategories[0];
-const secondSpendCategory = sortedCategories[1];
+  // --- CATEGORY ANALYSIS ---
+  const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+  const topSpendCategory = sortedCategories[0];
+  const secondSpendCategory = sortedCategories[1];
 
-// --- MONTH-ON-MONTH COMPARISON ---
-const lastMonthDate = new Date();
-lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
-const lastMonthTransactions = transactions.filter((t) => {
-  const d = new Date(t.date);
-  return (
-    d.getMonth() === lastMonthDate.getMonth() &&
-    d.getFullYear() === lastMonthDate.getFullYear()
-  );
-});
-const lastMonthExpenses = lastMonthTransactions
-  .filter((t) => t.type !== "income")
-  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-const lastMonthIncome = lastMonthTransactions
-  .filter((t) => t.type === "income")
-  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-
-const expenseChange = lastMonthExpenses > 0
-  ? Math.round(((monthlyExpenses - lastMonthExpenses) / lastMonthExpenses) * 100)
-  : null;
-const incomeChange = lastMonthIncome > 0
-  ? Math.round(((monthlyIncome - lastMonthIncome) / lastMonthIncome) * 100)
-  : null;
-
-// --- PROJECTED ANNUAL INCOME ---
-const today = new Date();
-const fyStartDate = new Date(`${selectedFinancialYear.split("/")[0]}-04-06`);
-const daysElapsed = Math.max(1, Math.floor((today - fyStartDate) / (1000 * 60 * 60 * 24)));
-
-
-
-// --- PROFIT MARGIN ---
-const profitMargin = totalIncome > 0 ? Math.round((profit / totalIncome) * 100) : 0;
-
-// --- TOP CATEGORY ANNUALISED ---
-const topCatAnnualised = topSpendCategory
-  ? Math.round((topSpendCategory[1] / daysElapsed) * 365)
-  : 0;
-
-// --- NON-ALLOWABLE CATEGORY FLAGS ---
-const nonAllowableCategories = ["Groceries", "Mortgage", "Clothing", "Shopping"];
-const flaggedCategories = sortedCategories.filter(([cat]) =>
-  nonAllowableCategories.includes(cat)
-);
-
-// --- BUILD NARRATIVE ---
-const narrativeParts = [];
-
-// 1. Opening — month-on-month income trend
-if (incomeChange !== null) {
-  const incomeDirection = incomeChange >= 0 ? "up" : "down";
-  const incomeAbs = Math.abs(incomeChange);
-  narrativeParts.push(
-    `📈 Income this month is ${formatCurrency(monthlyIncome)} — ${incomeAbs}% ${incomeDirection} compared to last month (${formatCurrency(lastMonthIncome)}).`
-  );
-} else {
-  narrativeParts.push(
-    `📈 Income this month: ${formatCurrency(monthlyIncome)}.`
-  );
-}
-
-// 2. Expense trend
-if (expenseChange !== null) {
-  const expDirection = expenseChange >= 0 ? "up" : "down";
-  const expAbs = Math.abs(expenseChange);
-  narrativeParts.push(
-    `💸 Your expenses are ${expAbs}% ${expDirection} vs last month (${formatCurrency(lastMonthExpenses)} → ${formatCurrency(monthlyExpenses)}). ${expenseChange > 15 ? "This is a significant rise — review your spending below." : ""}`
-  );
-}
-
-// 3. Top spending category with annualised projection
-if (topSpendCategory) {
-  narrativeParts.push(
-    `🔍 Your largest expense category is ${topSpendCategory[0]} at ${formatCurrency(topSpendCategory[1])} this tax year. At this rate, you are on track to spend ${formatCurrency(topCatAnnualised)} on ${topSpendCategory[0]} annually.`
-  );
-}
-
-// 4. Second category if exists
-if (secondSpendCategory) {
-  narrativeParts.push(
-    `📂 Your second largest category is ${secondSpendCategory[0]} at ${formatCurrency(secondSpendCategory[1])}.`
-  );
-}
-
-// 5. Profit margin insight
-if (totalIncome > 0) {
-  const marginComment = profitMargin >= 50
-    ? "This is a healthy margin — keep monitoring expenses."
-    : profitMargin >= 30
-    ? "Your margin is acceptable but there is room to improve."
-    : "Your profit margin is under pressure. Review your largest expense categories.";
-  narrativeParts.push(
-    `📊 Your profit margin is ${profitMargin}% (${formatCurrency(profit)} profit on ${formatCurrency(totalIncome)} income). ${marginComment}`
-  );
-}
-
-// 6. VAT — rolling 12-month rule
-const today12m = new Date();
-const twelveMonthsAgo = new Date();
-twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-
-const rolling12mIncome = transactions
-  .filter(t => {
+  // --- MONTH-ON-MONTH ---
+  const lastMonthDate = new Date();
+  lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+  const lastMonthTransactions = transactions.filter((t) => {
     const d = new Date(t.date);
-    return (
-      t.type === "income" &&
-      d >= twelveMonthsAgo &&
-      d <= today12m
-    );
-  })
-  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    return d.getMonth() === lastMonthDate.getMonth() && d.getFullYear() === lastMonthDate.getFullYear();
+  });
+  const lastMonthExpenses = lastMonthTransactions
+    .filter((t) => t.type !== "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  const lastMonthIncome = lastMonthTransactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
-const vatExceeded = rolling12mIncome >= 90000;
-const vatApproaching = rolling12mIncome >= 76500 && !vatExceeded;
-
-if (vatExceeded) {
-  narrativeParts.push(
-    `🚨 VAT Registration Required: Your taxable turnover in the last 12 months is ${formatCurrency(rolling12mIncome)} — you have exceeded the £90,000 VAT threshold. You must register for VAT with HMRC immediately. Failure to register on time may result in penalties.`
-  );
-} else if (vatApproaching) {
-  narrativeParts.push(
-    `⚠️ VAT Warning: Your taxable turnover in the last 12 months is ${formatCurrency(rolling12mIncome)} — you are approaching the £90,000 VAT registration threshold. Monitor your income closely and prepare to register if you exceed £90,000 in any rolling 12-month period.`
-  );
-}
-
-
-// 7. Non-allowable expense flags
-if (flaggedCategories.length > 0) {
-  const flagList = flaggedCategories
-    .map(([cat, amt]) => `${cat} (${formatCurrency(amt)})`)
-    .join(", ");
-  narrativeParts.push(
-    `🚨 HMRC Alert: You have spending in categories that may not be fully tax-allowable: ${flagList}. Enyi recommends reviewing these before your Self Assessment.`
-  );
-}
-
-// 8. Tax pot action
-if (estimatedTotalTax > 0) {
-  narrativeParts.push(
-    `💰 Action: Set aside ${formatCurrency(monthlyTaxPot)} this month for your tax pot. Your estimated total tax liability is ${formatCurrency(estimatedTotalTax)}.`
-  );
-}
-
-const financialNarrative = narrativeParts.join("\n\n");
-
-const groupedHistoryTransactions = filteredHistoryTransactions.reduce(
-  (groups, transaction) => {
-    const date = new Date(transaction.date);
-    const key = `${date.getFullYear()}-${date.getMonth()}`;
-
-    if (!groups[key]) {
-      groups[key] = [];
-    }
-
-    groups[key].push(transaction);
-    return groups;
-  },
-  {}
-);
-
-const sortedHistoryMonths = Object.keys(groupedHistoryTransactions).sort(
-  (a, b) => {
-    const [yearA, monthA] = a.split("-").map(Number);
-    const [yearB, monthB] = b.split("-").map(Number);
-
-    return new Date(yearB, monthB) - new Date(yearA, monthA);
-  }
-);
-
-const getHistoryMonthSummary = (monthTransactions) => {
-  const income = monthTransactions
-    .filter((transaction) => transaction.type === "income")
-    .reduce(
-      (sum, transaction) => sum + (parseFloat(transaction.amount) || 0),
-      0
-    );
-
-  const expenses = monthTransactions
-    .filter((transaction) => transaction.type !== "income")
-    .reduce(
-      (sum, transaction) => sum + (parseFloat(transaction.amount) || 0),
-      0
-    );
-
-  return {
-    income,
-    expenses,
-    profit: income - expenses
-  };
-};
-
-const downloadCSV = () => {
-  if (transactions.length === 0) {
-    alert("No transactions to download.");
-    return;
-  }
-
-  let exportTransactions = [...transactions];
+  const expenseChange = lastMonthExpenses > 0
+    ? Math.round(((monthlyExpenses - lastMonthExpenses) / lastMonthExpenses) * 100) : null;
+  const incomeChange = lastMonthIncome > 0
+    ? Math.round(((monthlyIncome - lastMonthIncome) / lastMonthIncome) * 100) : null;
 
   const today = new Date();
+  const fyStartDate = new Date(`${selectedFinancialYear.split("/")[0]}-04-06`);
+  const daysElapsed = Math.max(1, Math.floor((today - fyStartDate) / (1000 * 60 * 60 * 24)));
+  const profitMargin = totalIncome > 0 ? Math.round((profit / totalIncome) * 100) : 0;
+  const topCatAnnualised = topSpendCategory
+    ? Math.round((topSpendCategory[1] / daysElapsed) * 365) : 0;
 
-  if (csvRange === "3months") {
-    const start = new Date();
-    start.setMonth(start.getMonth() - 3);
+  const nonAllowableCategories = ["Groceries", "Mortgage", "Clothing", "Shopping"];
+  const flaggedCategories = sortedCategories.filter(([cat]) => nonAllowableCategories.includes(cat));
 
-    exportTransactions = exportTransactions.filter((transaction) => {
-      const date = new Date(transaction.date);
-      return date >= start && date <= today;
-    });
+  // --- NARRATIVE ---
+  const narrativeParts = [];
+
+  if (incomeChange !== null) {
+    const incomeDirection = incomeChange >= 0 ? "up" : "down";
+    narrativeParts.push(
+      `📈 Income this month is ${formatCurrency(monthlyIncome)} — ${Math.abs(incomeChange)}% ${incomeDirection} compared to last month (${formatCurrency(lastMonthIncome)}).`
+    );
+  } else {
+    narrativeParts.push(`📈 Income this month: ${formatCurrency(monthlyIncome)}.`);
   }
 
-  if (csvRange === "6months") {
-    const start = new Date();
-    start.setMonth(start.getMonth() - 6);
-
-    exportTransactions = exportTransactions.filter((transaction) => {
-      const date = new Date(transaction.date);
-      return date >= start && date <= today;
-    });
+  if (expenseChange !== null) {
+    const expDirection = expenseChange >= 0 ? "up" : "down";
+    narrativeParts.push(
+      `💸 Your expenses are ${Math.abs(expenseChange)}% ${expDirection} vs last month (${formatCurrency(lastMonthExpenses)} → ${formatCurrency(monthlyExpenses)}). ${expenseChange > 15 ? "This is a significant rise — review your spending below." : ""}`
+    );
   }
 
-  if (csvRange === "custom") {
-    if (!csvStartDate || !csvEndDate) {
-      alert("Please select both start and end dates.");
-      return;
+  if (topSpendCategory) {
+    narrativeParts.push(
+      `🔍 Your largest expense category is ${topSpendCategory[0]} at ${formatCurrency(topSpendCategory[1])} this tax year. At this rate, you are on track to spend ${formatCurrency(topCatAnnualised)} on ${topSpendCategory[0]} annually.`
+    );
+  }
+
+  if (secondSpendCategory) {
+    narrativeParts.push(
+      `📂 Your second largest category is ${secondSpendCategory[0]} at ${formatCurrency(secondSpendCategory[1])}.`
+    );
+  }
+
+  if (totalIncome > 0) {
+    const marginComment = profitMargin >= 50
+      ? "This is a healthy margin — keep monitoring expenses."
+      : profitMargin >= 30
+      ? "Your margin is acceptable but there is room to improve."
+      : "Your profit margin is under pressure. Review your largest expense categories.";
+    narrativeParts.push(
+      `📊 Your profit margin is ${profitMargin}% (${formatCurrency(profit)} profit on ${formatCurrency(totalIncome)} income). ${marginComment}`
+    );
+  }
+
+  const today12m = new Date();
+  const twelveMonthsAgo = new Date();
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  const rolling12mIncome = transactions
+    .filter(t => {
+      const d = new Date(t.date);
+      return t.type === "income" && d >= twelveMonthsAgo && d <= today12m;
+    })
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+  const vatExceeded = rolling12mIncome >= 90000;
+  const vatApproaching = rolling12mIncome >= 76500 && !vatExceeded;
+
+  if (vatExceeded) {
+    narrativeParts.push(
+      `🚨 VAT Registration Required: Your taxable turnover in the last 12 months is ${formatCurrency(rolling12mIncome)} — you have exceeded the £90,000 VAT threshold. You must register for VAT with HMRC immediately.`
+    );
+  } else if (vatApproaching) {
+    narrativeParts.push(
+      `⚠️ VAT Warning: Your taxable turnover in the last 12 months is ${formatCurrency(rolling12mIncome)} — you are approaching the £90,000 VAT registration threshold.`
+    );
+  }
+
+  if (flaggedCategories.length > 0) {
+    const flagList = flaggedCategories.map(([cat, amt]) => `${cat} (${formatCurrency(amt)})`).join(", ");
+    narrativeParts.push(
+      `🚨 HMRC Alert: You have spending in categories that may not be fully tax-allowable: ${flagList}. These are excluded from your tax calculation. Review them in Transaction History.`
+    );
+  }
+
+  if (nonAllowableExpenses > 0) {
+    narrativeParts.push(
+      `📋 ${formatCurrency(nonAllowableExpenses)} of your expenses are excluded from your tax calculation. Your HMRC-allowable expenses are ${formatCurrency(allowableExpenses)}.`
+    );
+  }
+
+  if (estimatedTotalTax > 0) {
+    narrativeParts.push(
+      `💰 Action: Set aside ${formatCurrency(monthlyTaxPot)} this month for your tax pot. Your estimated total tax liability is ${formatCurrency(estimatedTotalTax)}.`
+    );
+  }
+
+  const financialNarrative = narrativeParts.join("\n\n");
+
+  const groupedHistoryTransactions = filteredHistoryTransactions.reduce((groups, transaction) => {
+    const date = new Date(transaction.date);
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(transaction);
+    return groups;
+  }, {});
+
+  const sortedHistoryMonths = Object.keys(groupedHistoryTransactions).sort((a, b) => {
+    const [yearA, monthA] = a.split("-").map(Number);
+    const [yearB, monthB] = b.split("-").map(Number);
+    return new Date(yearB, monthB) - new Date(yearA, monthA);
+  });
+
+  const getHistoryMonthSummary = (monthTransactions) => {
+    const income = monthTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    const expenses = monthTransactions
+      .filter((t) => t.type !== "income")
+      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    return { income, expenses, profit: income - expenses };
+  };
+
+  const downloadCSV = () => {
+    if (transactions.length === 0) { alert("No transactions to download."); return; }
+    let exportTransactions = [...transactions];
+    const today = new Date();
+    if (csvRange === "3months") {
+      const start = new Date(); start.setMonth(start.getMonth() - 3);
+      exportTransactions = exportTransactions.filter((t) => new Date(t.date) >= start && new Date(t.date) <= today);
     }
-
-    const start = new Date(`${csvStartDate}T00:00:00`);
-    const end = new Date(`${csvEndDate}T23:59:59`);
-
-    exportTransactions = exportTransactions.filter((transaction) => {
-      const date = new Date(transaction.date);
-      return date >= start && date <= end;
-    });
-  }
-
-  const headers = ["Text", "Type", "Category", "Amount", "Date"];
-  const rows = exportTransactions.map((transaction) => [
-    
-      transaction.text,
-      transaction.type,
-      transaction.category,
-      transaction.amount,
-      transaction.date
+    if (csvRange === "6months") {
+      const start = new Date(); start.setMonth(start.getMonth() - 6);
+      exportTransactions = exportTransactions.filter((t) => new Date(t.date) >= start && new Date(t.date) <= today);
+    }
+    if (csvRange === "custom") {
+      if (!csvStartDate || !csvEndDate) { alert("Please select both start and end dates."); return; }
+      const start = new Date(`${csvStartDate}T00:00:00`);
+      const end = new Date(`${csvEndDate}T23:59:59`);
+      exportTransactions = exportTransactions.filter((t) => new Date(t.date) >= start && new Date(t.date) <= end);
+    }
+    const headers = ["Text", "Type", "Category", "Amount", "Date", "HMRC Status", "Override Reason"];
+    const rows = exportTransactions.map((t) => [
+      t.text, t.type, t.category, t.amount, t.date,
+      t.hmrcStatus || "", t.hmrcOverrideReason || ""
     ]);
-
     const csvContent = [headers, ...rows]
-      .map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
-      )
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
       .join("\n");
-
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
     link.href = url;
-    const userName =
-  currentUser?.displayName?.replace(/\s+/g, "-").toLowerCase() || "user";
-
-const downloadDate = new Date().toISOString().split("T")[0];
-
-link.setAttribute(
-  "download",
-  `${userName}-transactions-${downloadDate}.csv`
-);
+    const userName = currentUser?.displayName?.replace(/\s+/g, "-").toLowerCase() || "user";
+    const downloadDate = new Date().toISOString().split("T")[0];
+    link.setAttribute("download", `${userName}-transactions-${downloadDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
+
   const toggleMonth = (monthKey) => {
-  setExpandedMonths((prev) => ({
-    ...prev,
-    [monthKey]: !prev[monthKey]
-  }));
-};
-const addOtherIncomeSource = () => {
-  const parsedAmount = parseFloat(otherIncomeAmount);
+    setExpandedMonths((prev) => ({ ...prev, [monthKey]: !prev[monthKey] }));
+  };
 
-  if (!parsedAmount || parsedAmount <= 0) return;
-
-  setOtherIncomeSources((prev) => {
-    const existing = prev.find((item) => item.type === otherIncomeType);
-
-    if (existing) {
-      return prev.map((item) =>
-        item.type === otherIncomeType
-          ? { ...item, amount: (parseFloat(item.amount) || 0) + parsedAmount }
-          : item
-      );
-    }
-
-    return [
-      ...prev,
-      {
-        id: Date.now(),
-        type: otherIncomeType,
-        amount: parsedAmount
+  const addOtherIncomeSource = () => {
+    const parsedAmount = parseFloat(otherIncomeAmount);
+    if (!parsedAmount || parsedAmount <= 0) return;
+    setOtherIncomeSources((prev) => {
+      const existing = prev.find((item) => item.type === otherIncomeType);
+      if (existing) {
+        return prev.map((item) =>
+          item.type === otherIncomeType
+            ? { ...item, amount: (parseFloat(item.amount) || 0) + parsedAmount }
+            : item
+        );
       }
-    ];
-  });
-
-  setOtherIncomeAmount("");
-};
-
-const deleteOtherIncomeSource = (id) => {
-  setOtherIncomeSources((prev) => prev.filter((item) => item.id !== id));
-};
-const formatIncomeTypeLabel = (type) => {
-  if (type === "salary") return "Salary";
-  if (type === "rental") return "Rental income";
-  if (type === "dividends") return "Dividends";
-  if (type === "interest") return "Interest";
-  return "Other";
-};
-const getFinancialYearLabelFromDate = (dateValue) => {
-  const d = new Date(dateValue);
-
-  const year = d.getFullYear();
-  const taxYearStart = new Date(year, 3, 6); // 6 April
-
-  if (d >= taxYearStart) {
-    const nextShort = String((year + 1) % 100).padStart(2, "0");
-    return `${year}/${nextShort}`;
-  }
-
-  const prevYear = year - 1;
-  const shortYear = String(year % 100).padStart(2, "0");
-  return `${prevYear}/${shortYear}`;
-};
-const convertUkDateToIso = (dateString) => {
-  if (!dateString) return new Date().toISOString();
-
-  // already ISO-like
-  if (dateString.includes("T")) return new Date(dateString).toISOString();
-
-  const parts = dateString.split("/");
-
-  if (parts.length === 3) {
-    const [day, month, year] = parts;
-    const safeDate = new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day)
-    );
-    return safeDate.toISOString();
-  }
-
-  const fallback = new Date(dateString);
-  return isNaN(fallback.getTime())
-    ? new Date().toISOString()
-    : fallback.toISOString();
-};
-
-const handleSignOut = async () => {
-  try {
-    await auth.signOut();
-    window.location.href = "/";
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const generateInsights = useCallback(() => {
-
-
-  if (transactions.length === 0) {
-    setInsights([]);
-    return;
-  }
-
-  const generated = [];
-
-  // CURRENT MONTH TRANSACTIONS
-  const now = new Date();
-
-  const thisMonthTransactions = transactions.filter((t) => {
-    const d = new Date(t.date);
-
-    return (
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear()
-    );
-  });
-
-  // EXPENSES ONLY
-  const expenseTransactions = thisMonthTransactions.filter(
-    (t) => t.type !== "income"
-  );
-
-  // CATEGORY TOTALS
-  const monthlyCategoryTotals = {};
-
-  expenseTransactions.forEach((t) => {
-    const cat = t.category || "Misc";
-
-    monthlyCategoryTotals[cat] =
-      (monthlyCategoryTotals[cat] || 0) + Number(t.amount);
-  });
-
-  // TOP SPENDING CATEGORY
-  const topCategory = Object.entries(monthlyCategoryTotals).sort(
-    (a, b) => b[1] - a[1]
-  )[0];
-
-  if (topCategory) {
-    generated.push({
-      type: "spending",
-      title: "Spending Insight",
-      message: `${topCategory[0]} spending is £${topCategory[1].toFixed(
-        2
-      )} this month. Review this category for recurring costs.`,
+      return [...prev, { id: Date.now(), type: otherIncomeType, amount: parsedAmount }];
     });
-  }
+    setOtherIncomeAmount("");
+  };
 
-  // VAT WARNING
-  if (totalIncome >= 70000) {
-    generated.push({
-      type: "vat",
-      title: "VAT Threshold Alert",
-      message: `You are on track to earn £${totalIncome.toFixed(
-        0
-      )} this tax year. You may approach the £90,000 VAT threshold soon.`,
+  const deleteOtherIncomeSource = (id) => {
+    setOtherIncomeSources((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const formatIncomeTypeLabel = (type) => {
+    if (type === "salary") return "Salary";
+    if (type === "rental") return "Rental income";
+    if (type === "dividends") return "Dividends";
+    if (type === "interest") return "Interest";
+    return "Other";
+  };
+
+  const getFinancialYearLabelFromDate = (dateValue) => {
+    const d = new Date(dateValue);
+    const year = d.getFullYear();
+    const taxYearStart = new Date(year, 3, 6);
+    if (d >= taxYearStart) {
+      const nextShort = String((year + 1) % 100).padStart(2, "0");
+      return `${year}/${nextShort}`;
+    }
+    const prevYear = year - 1;
+    const shortYear = String(year % 100).padStart(2, "0");
+    return `${prevYear}/${shortYear}`;
+  };
+
+  const convertUkDateToIso = (dateString) => {
+    if (!dateString) return new Date().toISOString();
+    if (dateString.includes("T")) return new Date(dateString).toISOString();
+    const parts = dateString.split("/");
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      const safeDate = new Date(Number(year), Number(month) - 1, Number(day));
+      return safeDate.toISOString();
+    }
+    const fallback = new Date(dateString);
+    return isNaN(fallback.getTime()) ? new Date().toISOString() : fallback.toISOString();
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await auth.signOut();
+      window.location.href = "/";
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const generateInsights = useCallback(() => {
+    if (transactions.length === 0) { setInsights([]); return; }
+    const generated = [];
+    const now = new Date();
+    const thisMonthTransactions = transactions.filter((t) => {
+      const d = new Date(t.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     });
-  }
-
-  // LOW PROFIT WARNING
-  if (profit > 0 && profit < totalIncome * 0.3) {
-    generated.push({
-      type: "profit",
-      title: "Profit Margin Alert",
-      message:
-        "Your expenses are consuming a large portion of your revenue this year.",
+    const expenseTransactions = thisMonthTransactions.filter((t) => t.type !== "income");
+    const monthlyCategoryTotals = {};
+    expenseTransactions.forEach((t) => {
+      const cat = t.category || "Misc";
+      monthlyCategoryTotals[cat] = (monthlyCategoryTotals[cat] || 0) + Number(t.amount);
     });
-  }
+    const topCategory = Object.entries(monthlyCategoryTotals).sort((a, b) => b[1] - a[1])[0];
+    if (topCategory) {
+      generated.push({
+        type: "spending", title: "Spending Insight",
+        message: `${topCategory[0]} spending is £${topCategory[1].toFixed(2)} this month. Review this category for recurring costs.`
+      });
+    }
+    if (totalIncome >= 70000) {
+      generated.push({
+        type: "vat", title: "VAT Threshold Alert",
+        message: `You are on track to earn £${totalIncome.toFixed(0)} this tax year. You may approach the £90,000 VAT threshold soon.`
+      });
+    }
+    if (profit > 0 && profit < totalIncome * 0.3) {
+      generated.push({
+        type: "profit", title: "Profit Margin Alert",
+        message: "Your expenses are consuming a large portion of your revenue this year."
+      });
+    }
+    generated.push({
+      type: "summary", title: "Monthly Summary",
+      message: `This month you earned £${monthlyIncome.toFixed(2)} and spent £${monthlyExpenses.toFixed(2)}. Net position: £${monthlyProfit.toFixed(2)}.`
+    });
+    setInsights(generated);
+  }, [transactions, totalIncome, monthlyIncome, monthlyExpenses, monthlyProfit, profit]);
 
-  // MONTHLY SUMMARY
-  generated.push({
-    type: "summary",
-    title: "Monthly Summary",
-    message: `This month you earned £${monthlyIncome.toFixed(
-      2
-    )} and spent £${monthlyExpenses.toFixed(
-      2
-    )}. Net position: £${monthlyProfit.toFixed(2)}.`,
-  });
+  useEffect(() => { generateInsights(); }, [transactions, generateInsights]);
 
- setInsights(generated);
-
-}, [transactions, totalIncome, monthlyIncome, monthlyExpenses, monthlyProfit, profit]);
-
-useEffect(() => {
-  generateInsights();
-}, [transactions, generateInsights]);
-
-const scrollToTop = () => {
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth",
-  });
-};
-
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
     <div className="app-shell">
       <div className="app-container">
+
         <header className="brand-header">
-
-  <div className="brand-lockup">
-    <div className="brand-icon-tile">
-      <img src={logoIcon} alt="Enyi icon" className="brand-icon" />
-    </div>
-
-    <div className="brand-text">
-      <h1 className="brand-name">Enyi</h1>
-      <p className="brand-tagline">Your AI finance partner</p>
-    </div>
-  </div>
-
-           <div className="nav-menu-wrapper">
-    <button
-      className="nav-menu-button"
-      onClick={() => setMenuOpen(!menuOpen)}
-      aria-label="Open navigation menu"
-    >
-      <FiMenu size={24} />
-    </button>
-
-    {menuOpen && (
-      <div className="nav-dropdown">
-        <button onClick={() => scrollToSection("add-transaction")}>Add Transaction</button>
-        <button onClick={() => scrollToSection("receipts")}>Receipts</button>
-        <button onClick={() => scrollToSection("financial-overview")}>Financial Overview</button>
-        <button onClick={() => scrollToSection("spending-categories")}>Spending Categories</button>
-        <button onClick={() => scrollToSection("tax-estimate")}>Tax Estimate</button>
-        <button onClick={() => scrollToSection("enyi-ai")}>Enyi AI</button>
-        <button onClick={() => scrollToSection("transaction-history")}>Transaction History</button>
-
-        <div className="nav-divider" />
-
-        <button className="nav-signout" onClick={handleSignOut}>
-          Sign Out
-        </button>
-      </div>
-    )}
-    </div>
-
-
-</header>
+          <div className="brand-lockup">
+            <div className="brand-icon-tile">
+              <img src={logoIcon} alt="Enyi icon" className="brand-icon" />
+            </div>
+            <div className="brand-text">
+              <h1 className="brand-name">Enyi</h1>
+              <p className="brand-tagline">Your AI finance partner</p>
+            </div>
+          </div>
+          <div className="nav-menu-wrapper">
+            <button className="nav-menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Open navigation menu">
+              <FiMenu size={24} />
+            </button>
+            {menuOpen && (
+              <div className="nav-dropdown">
+                <button onClick={() => scrollToSection("add-transaction")}>Add Transaction</button>
+                <button onClick={() => scrollToSection("receipts")}>Receipts</button>
+                <button onClick={() => scrollToSection("financial-overview")}>Financial Overview</button>
+                <button onClick={() => scrollToSection("spending-categories")}>Spending Categories</button>
+                <button onClick={() => scrollToSection("tax-estimate")}>Tax Estimate</button>
+                <button onClick={() => scrollToSection("enyi-ai")}>Enyi AI</button>
+                <button onClick={() => scrollToSection("transaction-history")}>Transaction History</button>
+                <div className="nav-divider" />
+                <button className="nav-signout" onClick={handleSignOut}>Sign Out</button>
+              </div>
+            )}
+          </div>
+        </header>
 
         <section className="hero-card">
           <div className="hero-grid">
             <div className="hero-left">
-              <h2 className="hero-title">
-                Your money,
-                <br />
-                organised.
-              </h2>
-
+              <h2 className="hero-title">Your money,<br />organised.</h2>
               <p className="hero-subtitle">
-                Bookkeeping, tax clarity and personalised AI guidance 
-                for smarter business growth.
+                Bookkeeping, tax clarity and personalised AI guidance for smarter business growth.
               </p>
             </div>
-
             <div className="hero-right">
               <div className="hero-balance-card">
                 <span className="hero-balance-label">Net position</span>
                 <h3 className="hero-balance-value">{formatCurrency(profit)}</h3>
                 <p className="hero-balance-meta">
-                  Income {formatCurrency(totalIncome)} • Expenses{" "}
-                  {formatCurrency(totalExpenses)}
+                  Income {formatCurrency(totalIncome)} • Expenses {formatCurrency(totalExpenses)}
                 </p>
               </div>
             </div>
@@ -1305,239 +1034,128 @@ const scrollToTop = () => {
             <span className="overview-kicker">Income</span>
             <strong>{formatCurrency(totalIncome)}</strong>
           </div>
-
           <div className="overview-pill">
             <span className="overview-kicker">Expenses</span>
             <strong>{formatCurrency(totalExpenses)}</strong>
           </div>
-
-         <div className="overview-pill">
-  <span className="overview-kicker">Transactions</span>
-  <strong>{financialYearTransactions.length}</strong>
-</div>
-
+          <div className="overview-pill">
+            <span className="overview-kicker">Transactions</span>
+            <strong>{financialYearTransactions.length}</strong>
+          </div>
           <div className="overview-pill">
             <span className="overview-kicker">This month</span>
             <strong>{formatCurrency(monthlyProfit)}</strong>
           </div>
-          </section>
+        </section>
 
-<section className="insight-strip">
+        <section className="insight-strip">
+          <div className="insight-strip-left">
+            <div className="insight-ai-badge">Enyi AI</div>
+            <div className="insight-copy">
+              <h3>Business Insight</h3>
+              <p>Automated financial intelligence based on your recent activity</p>
+            </div>
+          </div>
+          <button className="insight-expand-button" onClick={() => setShowInsight(!showInsight)}>
+            {showInsight ? "Hide" : "View"}
+          </button>
+        </section>
 
-  <div className="insight-strip-left">
-
-    <div className="insight-ai-badge">
-      Enyi AI
-    </div>
-
-    <div className="insight-copy">
-
-      <h3>Business Insight</h3>
-
-      <p>
-        Automated financial intelligence based on your recent activity
-      </p>
-
-    </div>
-
-  </div>
-
-  <button
-    className="insight-expand-button"
-    onClick={() => setShowInsight(!showInsight)}
-  >
-    {showInsight ? "Hide" : "View"}
-  </button>
-
-</section>
-
-{showInsight && (
-  <div className="insight-expanded-card">
-    {financialNarrative.split("\n\n").map((point, index) => (
-      <p key={index} style={{ marginBottom: "12px", lineHeight: "1.6" }}>
-        {point}
-      </p>
-    ))}
-  </div>
-)}
-
-
-
+        {showInsight && (
+          <div className="insight-expanded-card">
+            {financialNarrative.split("\n\n").map((point, index) => (
+              <p key={index} style={{ marginBottom: "12px", lineHeight: "1.6" }}>{point}</p>
+            ))}
+          </div>
+        )}
 
         <section className="top-grid">
-  <div id="add-transaction" className="fin-card">
-    <div className="section-head">
-      <h2>Add Transaction</h2>
-      <p>Quickly log income or expenses</p>
-    </div>
-
-            <select
-              value={transactionType}
-              onChange={(e) => setTransactionType(e.target.value)}
-              className="fin-input"
-            >
+          <div id="add-transaction" className="fin-card">
+            <div className="section-head">
+              <h2>Add Transaction</h2>
+              <p>Quickly log income or expenses</p>
+            </div>
+            <select value={transactionType} onChange={(e) => setTransactionType(e.target.value)} className="fin-input">
               <option value="expense">Expense</option>
               <option value="income">Income</option>
             </select>
-
             <input
               type="text"
-              placeholder={
-                transactionType === "income"
-                  ? "Enter income (e.g Fees 350)"
-                  : "Enter expense (e.g Uber 25)"
-              }
+              placeholder={transactionType === "income" ? "Enter income (e.g Fees 350)" : "Enter expense (e.g Uber 25)"}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               className="fin-input"
             />
-
-            <input
-  type="date"
-  value={transactionDate}
-  onChange={(e) => setTransactionDate(e.target.value)}
-  className="fin-input"
-/>
-
-            <button onClick={addTransaction} className="primary-button">
-              Add Transaction
-            </button>
-
+            <input type="date" value={transactionDate} onChange={(e) => setTransactionDate(e.target.value)} className="fin-input" />
+            <button onClick={addTransaction} className="primary-button">Add Transaction</button>
             {statusMessage && <p className="status-text">{statusMessage}</p>}
-            {transactionSuccessMessage && (
-              <p className="success-text">{transactionSuccessMessage}</p>
-            )}
+            {transactionSuccessMessage && <p className="success-text">{transactionSuccessMessage}</p>}
           </div>
 
           <div id="receipts" className="fin-card">
-  <div className="section-head">
-    <h2>Receipts</h2>
-    <p>Capture or upload receipts instantly</p>
-  </div>
+            <div className="section-head">
+              <h2>Receipts</h2>
+              <p>Capture or upload receipts instantly</p>
+            </div>
             <div className="receipt-actions">
               <label className="primary-button action-button">
                 Take Receipt Photo
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => handleReceiptSelection(e.target.files[0])}
-                  style={{ display: "none" }}
-                />
+                <input ref={cameraInputRef} type="file" accept="image/*" capture="environment"
+                  onChange={(e) => handleReceiptSelection(e.target.files[0])} style={{ display: "none" }} />
               </label>
-
               <label className="secondary-button action-button">
                 Upload Receipt File
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => handleReceiptSelection(e.target.files[0])}
-                  style={{ display: "none" }}
-                />
+                <input ref={fileInputRef} type="file" accept="image/*,.pdf"
+                  onChange={(e) => handleReceiptSelection(e.target.files[0])} style={{ display: "none" }} />
               </label>
             </div>
-
             {receiptFile && (
               <div className="receipt-selected-box">
-                <p className="receipt-selected-text">
-                  Selected: {receiptFile.name}
-                </p>
-
+                <p className="receipt-selected-text">Selected: {receiptFile.name}</p>
                 {receiptFile.type.startsWith("image/") && (
-                  <img
-                    src={URL.createObjectURL(receiptFile)}
-                    alt="Receipt preview"
-                    className="receipt-preview-image"
-                  />
+                  <img src={URL.createObjectURL(receiptFile)} alt="Receipt preview" className="receipt-preview-image" />
                 )}
-
-                <button onClick={handleReceiptUpload} className="primary-button">
-                  Upload Receipt
-                </button>
+                <button onClick={handleReceiptUpload} className="primary-button">Upload Receipt</button>
               </div>
             )}
-
             {receiptStatus && <p className="status-text">{receiptStatus}</p>}
-            {receiptSuccessMessage && (
-              <p className="success-text">{receiptSuccessMessage}</p>
-            )}
-
+            {receiptSuccessMessage && <p className="success-text">{receiptSuccessMessage}</p>}
             {showReceiptReview && receiptPreview && (
               <div className="review-box">
                 <h3>Review receipt</h3>
-
-                <input
-                  className="fin-input"
-                  value={receiptPreview.merchant}
-                  onChange={(e) =>
-                    setReceiptPreview({
-                      ...receiptPreview,
-                      merchant: e.target.value
-                    })
-                  }
-                  placeholder="Merchant"
-                />
-
-                <input
-                  className="fin-input"
-                  value={receiptPreview.amount}
-                  onChange={(e) =>
-                    setReceiptPreview({
-                      ...receiptPreview,
-                      amount: e.target.value
-                    })
-                  }
-                  placeholder="Amount"
-                />
-
-                <input
-                  className="fin-input"
-                  value={receiptPreview.date}
-                  onChange={(e) =>
-                    setReceiptPreview({
-                      ...receiptPreview,
-                      date: e.target.value
-                    })
-                  }
-                  placeholder="Date"
-                />
-
-                <select
-                  className="fin-input"
-                  value={receiptPreview.category}
-                  onChange={(e) =>
-                    setReceiptPreview({
-                      ...receiptPreview,
-                      category: e.target.value
-                    })
-                  }
-                >
-<option value="Groceries">Groceries</option>
-<option value="Food">Food</option>
-<option value="Travel">Travel</option>
-<option value="Fuel">Fuel</option>
-<option value="Mortgage">Mortgage</option>
-<option value="Rent">Rent</option>
-<option value="Professional fees">Professional fees</option>
-<option value="Car Maintenance">Car Maintenance</option>
-<option value="Utilities">Utilities</option>
-<option value="Internet">Internet</option>
-<option value="Phone">Phone</option>
-<option value="Insurance">Insurance</option>
-<option value="Shopping">Shopping</option>
-<option value="Misc">Misc</option>
+                <input className="fin-input" value={receiptPreview.merchant}
+                  onChange={(e) => setReceiptPreview({ ...receiptPreview, merchant: e.target.value })} placeholder="Merchant" />
+                <input className="fin-input" value={receiptPreview.amount}
+                  onChange={(e) => setReceiptPreview({ ...receiptPreview, amount: e.target.value })} placeholder="Amount" />
+                <input className="fin-input" value={receiptPreview.date}
+                  onChange={(e) => setReceiptPreview({ ...receiptPreview, date: e.target.value })} placeholder="Date" />
+                <select className="fin-input" value={receiptPreview.category}
+                  onChange={(e) => setReceiptPreview({ ...receiptPreview, category: e.target.value })}>
+                  <option value="Travel">Travel (business)</option>
+                  <option value="Fuel">Fuel (business)</option>
+                  <option value="Office">Office costs</option>
+                  <option value="Phone">Phone & internet</option>
+                  <option value="Software">Software & subscriptions</option>
+                  <option value="Marketing">Marketing & advertising</option>
+                  <option value="Professional fees">Professional fees</option>
+                  <option value="Training">Training & CPD</option>
+                  <option value="Utilities">Utilities (business)</option>
+                  <option value="Insurance">Business insurance</option>
+                  <option value="Stock">Stock & materials</option>
+                  <option value="Wages">Staff & wages</option>
+                  <option value="Bank charges">Bank charges</option>
+                  <option value="Rent">Rent (business premises)</option>
+                  <option value="Food">Food & drink</option>
+                  <option value="Clothing">Clothing</option>
+                  <option value="Groceries">Groceries</option>
+                  <option value="Mortgage">Mortgage</option>
+                  <option value="Personal">Personal (non-business)</option>
+                  <option value="Entertainment">Client entertainment</option>
+                  <option value="Misc">Miscellaneous</option>
                 </select>
-
                 <div className="button-group">
-                  <button onClick={confirmReceiptSave} className="primary-button">
-                    Confirm Save
-                  </button>
-
-                  <button onClick={cancelReceiptReview} className="secondary-button">
-                    Cancel
-                  </button>
+                  <button onClick={confirmReceiptSave} className="primary-button">Confirm Save</button>
+                  <button onClick={cancelReceiptReview} className="secondary-button">Cancel</button>
                 </div>
               </div>
             )}
@@ -1545,107 +1163,78 @@ const scrollToTop = () => {
         </section>
 
         <section className="two-column-grid">
-
-
-<div id="financial-overview" className="fin-card">
- <div className="summary-top">
-  <div>
-    <h2>Financial Overview</h2>
-
-    <p className="section-subtitle">
-      A live snapshot of your business finances
-    </p>
-    <div className="financial-year-row">
-      <label className="financial-year-label">Financial year</label>
-      <select
-        value={selectedFinancialYear}
-        onChange={(e) => setSelectedFinancialYear(e.target.value)}
-        className="financial-year-select"
-      >
-        <option value="2023/24">2023/24</option>
-        <option value="2024/25">2024/25</option>
-        <option value="2025/26">2025/26</option>
-        <option value="2026/27">2026/27</option>
-      </select>
-    </div>
-  </div>
-
-  <div className="brand-chip">Live</div>
-</div>
-
+          <div id="financial-overview" className="fin-card">
+            <div className="summary-top">
+              <div>
+                <h2>Financial Overview</h2>
+                <p className="section-subtitle">A live snapshot of your business finances</p>
+                <div className="financial-year-row">
+                  <label className="financial-year-label">Financial year</label>
+                  <select value={selectedFinancialYear} onChange={(e) => setSelectedFinancialYear(e.target.value)} className="financial-year-select">
+                    <option value="2023/24">2023/24</option>
+                    <option value="2024/25">2024/25</option>
+                    <option value="2025/26">2025/26</option>
+                    <option value="2026/27">2026/27</option>
+                  </select>
+                </div>
+              </div>
+              <div className="brand-chip">Live</div>
+            </div>
             <div className="stat-grid">
               <div className="stat-card">
                 <span className="stat-label">Income</span>
                 <span className="stat-value">{formatCurrency(totalIncome)}</span>
               </div>
-
               <div className="stat-card">
-                <span className="stat-label">Expenses</span>
+                <span className="stat-label">Total expenses</span>
                 <span className="stat-value">{formatCurrency(totalExpenses)}</span>
               </div>
-
+              <div className="stat-card highlight-card" style={{ borderColor: "#10b981" }}>
+                <span className="stat-label">HMRC allowable expenses</span>
+                <span className="stat-value" style={{ color: "#065f46" }}>{formatCurrency(allowableExpenses)}</span>
+              </div>
+              {nonAllowableExpenses > 0 && (
+                <div className="stat-card" style={{ background: "#fff5f5", borderColor: "#fca5a5" }}>
+                  <span className="stat-label">Non-allowable (excluded from tax)</span>
+                  <span className="stat-value" style={{ color: "#b91c1c" }}>{formatCurrency(nonAllowableExpenses)}</span>
+                </div>
+              )}
               <div className="stat-card">
                 <span className="stat-label">Profit</span>
                 <span className="stat-value">{formatCurrency(profit)}</span>
               </div>
-
               <div className="stat-card">
-              <span className="stat-label">Transactions</span>
-              <span className="stat-value">{financialYearTransactions.length}</span>
+                <span className="stat-label">Transactions</span>
+                <span className="stat-value">{financialYearTransactions.length}</span>
               </div>
-
               <div className="stat-card">
                 <span className="stat-label">Monthly income</span>
                 <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
               </div>
-
               <div className="stat-card">
                 <span className="stat-label">Monthly expenses</span>
                 <span className="stat-value">{formatCurrency(monthlyExpenses)}</span>
               </div>
             </div>
-
             <div className="button-group top-space">
-  <select
-    className="fin-input"
-    value={csvRange}
-    onChange={(e) => setCsvRange(e.target.value)}
-  >
-    <option value="all">All records</option>
-    <option value="3months">Last 3 months</option>
-    <option value="6months">Last 6 months</option>
-    <option value="custom">Custom range</option>
-  </select>
-
-  {csvRange === "custom" && (
-    <>
-      <input
-        type="date"
-        className="fin-input"
-        value={csvStartDate}
-        onChange={(e) => setCsvStartDate(e.target.value)}
-      />
-
-      <input
-        type="date"
-        className="fin-input"
-        value={csvEndDate}
-        onChange={(e) => setCsvEndDate(e.target.value)}
-      />
-    </>
-  )}
-
-  <button onClick={downloadCSV} className="primary-button">
-    Download CSV
-  </button>
-
-  <button onClick={clearAllTransactions} className="secondary-button">
-    Clear All Data
-  </button>
-</div>
+              <select className="fin-input" value={csvRange} onChange={(e) => setCsvRange(e.target.value)}>
+                <option value="all">All records</option>
+                <option value="3months">Last 3 months</option>
+                <option value="6months">Last 6 months</option>
+                <option value="custom">Custom range</option>
+              </select>
+              {csvRange === "custom" && (
+                <>
+                  <input type="date" className="fin-input" value={csvStartDate} onChange={(e) => setCsvStartDate(e.target.value)} />
+                  <input type="date" className="fin-input" value={csvEndDate} onChange={(e) => setCsvEndDate(e.target.value)} />
+                </>
+              )}
+              <button onClick={downloadCSV} className="primary-button">Download CSV</button>
+              <button onClick={clearAllTransactions} className="secondary-button">Clear All Data</button>
+            </div>
           </div>
 
-<div id="spending-categories" className="fin-card">
+  <div id="spending-categories" className="fin-card">
   <div className="section-head">
     <h2>Spending by Category</h2>
     <p>See where your money is going in {selectedFinancialYear}</p>
@@ -1653,380 +1242,468 @@ const scrollToTop = () => {
 
   {Object.entries(categoryTotals).length === 0 ? (
     <p className="empty-text">No expense categories yet for {selectedFinancialYear}.</p>
-  ) : (
-    <div className="category-chart">
-      {Object.entries(categoryTotals).map(([cat, amt]) => (
-        <div key={cat} className="chart-row">
-          <div className="chart-row-top">
-            <span className={`category-chip ${getCategoryColor(cat)}`}>
-              {cat}
-            </span>
-            <strong>{formatCurrency(amt)}</strong>
-          </div>
+  ) : (() => {
+    const allEntries = Object.entries(categoryTotals);
 
-          <div className="chart-track">
-            <div
-              className={`chart-fill ${getCategoryColor(cat)}`}
-              style={{
-                width:
-                  maxCategoryAmount > 0
-                    ? `${(amt / maxCategoryAmount) * 100}%`
-                    : "0%"
-              }}
-            />
-          </div>
+    const allowableEntries = allEntries.filter(([cat]) =>
+      getCategoryAllowability(cat) === "always" || overriddenCategories.has(cat)
+    );
+
+    const conditionalEntries = allEntries.filter(([cat]) =>
+      getCategoryAllowability(cat) === "conditional" &&
+      !overriddenCategories.has(cat) &&
+      !personalCategories.has(cat)
+    );
+
+    const neverEntries = allEntries.filter(([cat]) =>
+      (getCategoryAllowability(cat) === "never" || personalCategories.has(cat)) &&
+      !overriddenCategories.has(cat)
+    );
+
+    const renderBar = (cat, amt) => (
+      <div
+        key={cat}
+        className="chart-row chart-row-clickable"
+        onClick={() => {
+          const allowability = getCategoryAllowability(cat);
+          if (allowability === "conditional" || allowability === "never") {
+            const match = financialYearTransactions.find(
+              t => t.type !== "income" &&
+                   t.category === cat &&
+                   t.hmrcStatus !== "overridden" &&
+                   t.hmrcStatus !== "personal" &&
+                   t.hmrcStatus !== "recategorised"
+            );
+            if (match) setHmrcFlagTransaction(match);
+          }
+        }}
+      >
+        <div className="chart-row-top">
+          <span className="cat-label">{cat}</span>
+          <span className="cat-amount">{formatCurrency(amt)}</span>
         </div>
-      ))}
-    </div>
-  )}
+        <div className="chart-track">
+          <div
+            className="chart-fill-premium"
+            style={{
+              width: maxCategoryAmount > 0 ? `${(amt / maxCategoryAmount) * 100}%` : "0%",
+              background: overriddenCategories.has(cat)
+                ? "#10b981"
+                : getCategoryAllowability(cat) === "always"
+                ? "#10b981"
+                : getCategoryAllowability(cat) === "conditional"
+                ? "#f59e0b"
+                : "#ef4444"
+            }}
+          />
+        </div>
+      </div>
+    );
+
+    const SectionHeader = ({ type, label, total, count }) => {
+      const isOpen = expandedCategories[type];
+      const colors = {
+        always: { bg: "#f0fdf4", border: "#bbf7d0", text: "#065f46", accent: "#10b981" },
+        conditional: { bg: "#fffbeb", border: "#fde68a", text: "#78350f", accent: "#f59e0b" },
+        never: { bg: "#fff5f5", border: "#fecaca", text: "#7f1d1d", accent: "#ef4444" }
+      };
+      const c = colors[type];
+
+      return (
+        <button
+          className="cat-section-header"
+          onClick={() => toggleCategorySection(type)}
+          style={{ background: c.bg, borderColor: c.border }}
+          type="button"
+        >
+          <div className="cat-section-header-left">
+            <div className="cat-section-dot" style={{ background: c.accent }} />
+            <span className="cat-section-label" style={{ color: c.text }}>
+              {label}
+            </span>
+            <span className="cat-section-count" style={{ color: c.accent }}>
+              {count} {count === 1 ? "category" : "categories"}
+            </span>
+          </div>
+          <div className="cat-section-header-right">
+            <span className="cat-section-total" style={{ color: c.text }}>
+              {formatCurrency(total)}
+            </span>
+            <span
+              className="cat-section-chevron"
+              style={{
+                color: c.text,
+                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)"
+              }}
+            >
+              ▾
+            </span>
+          </div>
+        </button>
+      );
+    };
+
+    return (
+      <div className="category-sections">
+
+
+        {/* ALLOWABLE */}
+        {allowableEntries.length > 0 && (
+          <div className="cat-section">
+            <SectionHeader
+              type="always"
+              label="Reduces your tax bill"
+              total={allowableEntries.reduce((s, [, a]) => s + a, 0)}
+              count={allowableEntries.length}
+            />
+            {expandedCategories.always && (
+              <div className="cat-section-body">
+                {allowableEntries.map(([cat, amt]) => renderBar(cat, amt))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CONDITIONAL */}
+        {conditionalEntries.length > 0 && (
+          <div className="cat-section">
+            <SectionHeader
+              type="conditional"
+            label="Needs a quick check"
+              total={conditionalEntries.reduce((s, [, a]) => s + a, 0)}
+              count={conditionalEntries.length}
+            />
+            {expandedCategories.conditional && (
+              <div className="cat-section-body">
+                <p className="cat-section-note">
+                 These could reduce your tax bill — but only if they were genuinely for work. Tap any item to confirm it or move it to personal.
+                </p>
+                {conditionalEntries.map(([cat, amt]) => renderBar(cat, amt))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* NOT ALLOWABLE */}
+        {neverEntries.length > 0 && (
+          <div className="cat-section">
+            <SectionHeader
+              type="never"
+              label="Personal — no tax benefit"
+              total={neverEntries.reduce((s, [, a]) => s + a, 0)}
+              count={neverEntries.length}
+            />
+            {expandedCategories.never && (
+              <div className="cat-section-body">
+                <p className="cat-section-note">
+                 HMRC won't accept these as business expenses so they don't reduce your tax. If something is here by mistake, tap it to move it.
+                </p>
+                {neverEntries.map(([cat, amt]) => renderBar(cat, amt))}
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    );
+  })()}
 </div>
+
         </section>
 
- 
-<section id="tax-estimate" className="fin-card">
-  <div className="summary-top">
-    <div>
-      <h2>Tax Estimate</h2>
-      <p className="section-subtitle">
-        UK sole trader estimate • {region} • Viewing {selectedFinancialYear}
-      </p>
-    </div>
-    <div className="brand-chip">Estimate</div>
-  </div>
-
-<div className="tax-input-block top-space">
-  <div className="tax-label-row">
-    <label className="tax-input-label">
-      Other taxable income outside this business
-    </label>
-
-    <span className="info-icon">
-      ⓘ
-      <span className="tooltip">
-        Include income not recorded in this business, such as salary, rental
-        income, dividends or interest.
-      </span>
-    </span>
-  </div>
-
-  <div className="tax-income-row">
-    <select
-      value={otherIncomeType}
-      onChange={(e) => setOtherIncomeType(e.target.value)}
-      className="tax-income-select"
-    >
-      <option value="salary">Salary</option>
-      <option value="rental">Rental income</option>
-      <option value="dividends">Dividends</option>
-      <option value="interest">Interest</option>
-      <option value="other">Other</option>
-    </select>
-
-    <input
-      type="number"
-      min="0"
-      step="0.01"
-      value={otherIncomeAmount}
-      onChange={(e) => setOtherIncomeAmount(e.target.value)}
-      className="fin-input tax-income-amount"
-      placeholder="Enter amount"
-    />
-
-    <button
-      type="button"
-      onClick={addOtherIncomeSource}
-      className="secondary-button tax-add-income-button"
-    >
-      Add
-    </button>
-  </div>
-
-  {otherIncomeSources.length > 0 && (
-    <div className="other-income-list">
-      {otherIncomeSources.map((item) => (
-        <div key={item.id} className="other-income-item">
-          <div className="other-income-left">
-            <span className="other-income-type">
-              {formatIncomeTypeLabel(item.type)}
-            </span>
-            <span className="other-income-value">
-              {formatCurrency(item.amount)}
-            </span>
+        <section id="tax-estimate" className="fin-card">
+          <div className="summary-top">
+            <div>
+              <h2>Tax Estimate</h2>
+              <p className="section-subtitle">UK sole trader estimate • {region} • Viewing {selectedFinancialYear}</p>
+            </div>
+            <div className="brand-chip">Estimate</div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => deleteOtherIncomeSource(item.id)}
-            className="other-income-remove"
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
-  <div className="stat-grid top-space">
-    <div className="stat-card">
-      <span className="stat-label">Business profit (before tax)</span>
-      <span className="stat-value">{formatCurrency(estimatedProfit)}</span>
-    </div>
-
-    <div className="stat-card">
-      <span className="stat-label">Personal allowance</span>
-      <span className="stat-value">{formatCurrency(personalAllowance)}</span>
-    </div>
-
-    <div className="stat-card">
-      <span className="stat-label">Taxable income</span>
-      <span className="stat-value">{formatCurrency(taxableIncome)}</span>
-    </div>
-
-    <div className="stat-card">
-      <span className="stat-label">Estimated Income Tax</span>
-      <span className="stat-value">{formatCurrency(estimatedIncomeTax)}</span>
-    </div>
-
-    <div className="stat-card">
-      <span className="stat-label">Estimated Class 4 NI</span>
-      <span className="stat-value">{formatCurrency(estimatedClass4NI)}</span>
-    </div>
-
-    <div className="stat-card highlight-card">
-      <span className="stat-label">Estimated total tax</span>
-      <span className="stat-value">{formatCurrency(estimatedTotalTax)}</span>
-    </div>
-
-    <div className="stat-card">
-      <span className="stat-label">Take-home (after tax)</span>
-      <span className="stat-value">{formatCurrency(takeHome)}</span>
-    </div>
-
-    <div className="stat-card highlight-card">
-      <span className="stat-label">Monthly tax pot</span>
-      <span className="stat-value">{formatCurrency(monthlyTaxPot)}</span>
-    </div>
-  </div>
-
-  <p className="tax-note bottom-note">
-    Estimate only. Final tax may differ based on other income, reliefs,
-    allowances and HMRC rules.
-  </p>
-</section>
-
-<div id="enyi-ai" className="fin-card"></div>
-<AIChatPanel
-  selectedFinancialYear={selectedFinancialYear}
-  transactions={transactions}
-/>
-
-<section id="transaction-history" className="fin-card">
-  <div className="section-head">
-    <h2 className="section-title">Transaction History</h2>
-    <p>Review and manage your records for {selectedFinancialYear}</p>
-  </div>
-
-  {sortedHistoryMonths.length === 0 ? (
-    <p className="empty-text">
-      No transactions found for {selectedFinancialYear}.
-    </p>
-  ) : (
-    <div className="history-grouped-list">
-      {sortedHistoryMonths.map((monthKey) => {
-        const monthTransactions = groupedHistoryTransactions[monthKey];
-        const monthSummary = getHistoryMonthSummary(monthTransactions);
-        const [year, month] = monthKey.split("-").map(Number);
-
-        const monthLabel = new Date(year, month).toLocaleString("en-GB", {
-          month: "long",
-          year: "numeric"
-        });
-
-        const isExpanded = !!expandedMonths[monthKey];
-
-        return (
-          <div key={monthKey} className="month-group">
-            <button
-              type="button"
-              className="month-group-header month-toggle"
-              onClick={() => toggleMonth(monthKey)}
-            >
-              <div>
-                <h3 className="month-group-title">{monthLabel}</h3>
-                <p className="month-group-subtitle">
-                  {monthTransactions.length} transaction
-                  {monthTransactions.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-
-            <div className="month-group-summary-wrap">
-  <div className="month-group-summary">
-    <span className="month-summary-item">
-      Income {formatCurrency(monthSummary.income)}
-    </span>
-
-    <span className="month-summary-item">
-      Expenses {formatCurrency(monthSummary.expenses)}
-    </span>
-
-    <strong
-      className={`month-summary-net ${
-        monthSummary.profit < 0 ? "negative" : "positive"
-      }`}
-    >
-      Net {formatCurrency(monthSummary.profit)}
-    </strong>
-  </div>
-                <span className={`month-chevron ${isExpanded ? "open" : ""}`}>
-                  ▾
-                </span>
-              </div>
-            </button>
-
-            {isExpanded && (
-              <div className="history-list">
-                {monthTransactions.map((transaction) => (
-                  <div key={transaction.id} className="history-item">
-                    {editingId === transaction.id ? (
-                      <div>
-                        <input
-                          value={editForm.text}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, text: e.target.value })
-                          }
-                          className="fin-input"
-                        />
-
-                        <select
-                          value={editForm.type}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, type: e.target.value })
-                          }
-                          className="fin-input"
-                        >
-                          <option value="expense">Expense</option>
-                          <option value="income">Income</option>
-                        </select>
-
-                        <select
-                          value={editForm.category}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              category: e.target.value
-                            })
-                          }
-                          className="fin-input"
-                        >
-                          <option value="">Select category</option>
-                          <option value="Income">Income</option>
-                          <option value="Food">Food</option>
-                          <option value="Travel">Travel</option>
-                          <option value="Utilities">Utilities</option>
-                          <option value="Rent">Rent</option>
-                          <option value="Misc">Misc</option>
-                        </select>
-
-                        <input
-                          value={editForm.amount}
-                          onChange={(e) =>
-                            setEditForm({ ...editForm, amount: e.target.value })
-                          }
-                          className="fin-input"
-                        />
-
-                          <input
-  type="date"
-  value={editForm.date}
-  onChange={(e) =>
-    setEditForm({ ...editForm, date: e.target.value })
-  }
-  className="fin-input"
-/>
-                        <div className="button-group">
-                          <button
-                            onClick={() => saveEdit(transaction.id)}
-                            className="primary-button"
-                          >
-                            Save
-                          </button>
-
-                          <button
-                            onClick={cancelEdit}
-                            className="secondary-button"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="history-item-inner">
-                        <div className="history-left">
-                          <div className="history-title">{transaction.text}</div>
-                          <div className="history-meta">
-                            {new Date(transaction.date).toLocaleDateString()}
-                          </div>
-
-                          <div className="history-chip-row">
-                            <span
-                              className={`category-chip ${getCategoryColor(
-                                transaction.category
-                              )}`}
-                            >
-                              {transaction.category}
-                            </span>
-
-                            <span
-                              className={`type-chip ${
-                                transaction.type === "income"
-                                  ? "type-income"
-                                  : "type-expense"
-                              }`}
-                            >
-                              {transaction.type}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="history-right">
-                          <div className="history-amount">
-                            {formatCurrency(transaction.amount)}
-                          </div>
-
-                          <div className="button-group history-actions">
-                            <button
-                              onClick={() => startEditing(transaction)}
-                              className="secondary-button small-button"
-                            >
-                              Edit
-                            </button>
-
-                            <button
-                              onClick={() => deleteTransaction(transaction.id)}
-                              className="secondary-button small-button"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+          <div className="tax-input-block top-space">
+            <div className="tax-label-row">
+              <label className="tax-input-label">Other taxable income outside this business</label>
+              <span className="info-icon">
+                ⓘ
+                <span className="tooltip">Include income not recorded in this business, such as salary, rental income, dividends or interest.</span>
+              </span>
+            </div>
+            <div className="tax-income-row">
+              <select value={otherIncomeType} onChange={(e) => setOtherIncomeType(e.target.value)} className="tax-income-select">
+                <option value="salary">Salary</option>
+                <option value="rental">Rental income</option>
+                <option value="dividends">Dividends</option>
+                <option value="interest">Interest</option>
+                <option value="other">Other</option>
+              </select>
+              <input type="number" min="0" step="0.01" value={otherIncomeAmount}
+                onChange={(e) => setOtherIncomeAmount(e.target.value)}
+                className="fin-input tax-income-amount" placeholder="Enter amount" />
+              <button type="button" onClick={addOtherIncomeSource} className="secondary-button tax-add-income-button">Add</button>
+            </div>
+            {otherIncomeSources.length > 0 && (
+              <div className="other-income-list">
+                {otherIncomeSources.map((item) => (
+                  <div key={item.id} className="other-income-item">
+                    <div className="other-income-left">
+                      <span className="other-income-type">{formatIncomeTypeLabel(item.type)}</span>
+                      <span className="other-income-value">{formatCurrency(item.amount)}</span>
+                    </div>
+                    <button type="button" onClick={() => deleteOtherIncomeSource(item.id)} className="other-income-remove">Remove</button>
                   </div>
                 ))}
               </div>
             )}
           </div>
-        );
-      })}
-    </div>
-  )}
-</section>
-{showBackToTop && (
-  <button className="back-to-top" onClick={scrollToTop}>
-    ↑ Top
-  </button>
-)}
+          <div className="stat-grid top-space">
+            <div className="stat-card">
+              <span className="stat-label">Taxable profit (HMRC allowable expenses only)</span>
+              <span className="stat-value">{formatCurrency(estimatedProfit)}</span>
+              {nonAllowableExpenses > 0 && (
+                <span style={{ fontSize: "12px", color: "#6b7280", marginTop: "6px", display: "block" }}>
+                  {formatCurrency(nonAllowableExpenses)} of non-allowable expenses excluded
+                </span>
+              )}
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Personal allowance</span>
+              <span className="stat-value">{formatCurrency(personalAllowance)}</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Taxable income</span>
+              <span className="stat-value">{formatCurrency(taxableIncome)}</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Estimated Income Tax</span>
+              <span className="stat-value">{formatCurrency(estimatedIncomeTax)}</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Estimated Class 4 NI</span>
+              <span className="stat-value">{formatCurrency(estimatedClass4NI)}</span>
+            </div>
+            <div className="stat-card highlight-card">
+              <span className="stat-label">Estimated total tax</span>
+              <span className="stat-value">{formatCurrency(estimatedTotalTax)}</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Take-home (after tax)</span>
+              <span className="stat-value">{formatCurrency(takeHome)}</span>
+            </div>
+            <div className="stat-card highlight-card">
+              <span className="stat-label">Monthly tax pot</span>
+              <span className="stat-value">{formatCurrency(monthlyTaxPot)}</span>
+            </div>
+          </div>
+          <p className="tax-note bottom-note">
+            Estimate only. Final tax may differ based on other income, reliefs, allowances and HMRC rules.
+          </p>
+        </section>
+
+        <div id="enyi-ai" className="fin-card"></div>
+        <AIChatPanel selectedFinancialYear={selectedFinancialYear} transactions={transactions} />
+
+        <section id="transaction-history" className="fin-card">
+          <div className="section-head">
+            <h2 className="section-title">Transaction History</h2>
+            <p>Review and manage your records for {selectedFinancialYear}</p>
+          </div>
+          {sortedHistoryMonths.length === 0 ? (
+            <p className="empty-text">No transactions found for {selectedFinancialYear}.</p>
+          ) : (
+            <div className="history-grouped-list">
+              {sortedHistoryMonths.map((monthKey) => {
+                const monthTransactions = groupedHistoryTransactions[monthKey];
+                const monthSummary = getHistoryMonthSummary(monthTransactions);
+                const [year, month] = monthKey.split("-").map(Number);
+                const monthLabel = new Date(year, month).toLocaleString("en-GB", { month: "long", year: "numeric" });
+                const isExpanded = !!expandedMonths[monthKey];
+
+                return (
+                  <div key={monthKey} className="month-group">
+                    <button type="button" className="month-group-header month-toggle" onClick={() => toggleMonth(monthKey)}>
+                      <div>
+                        <h3 className="month-group-title">{monthLabel}</h3>
+                        <p className="month-group-subtitle">
+                          {monthTransactions.length} transaction{monthTransactions.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <div className="month-group-summary-wrap">
+                        <div className="month-group-summary">
+                          <span className="month-summary-item">Income {formatCurrency(monthSummary.income)}</span>
+                          <span className="month-summary-item">Expenses {formatCurrency(monthSummary.expenses)}</span>
+                          <strong className={`month-summary-net ${monthSummary.profit < 0 ? "negative" : "positive"}`}>
+                            Net {formatCurrency(monthSummary.profit)}
+                          </strong>
+                        </div>
+                        <span className={`month-chevron ${isExpanded ? "open" : ""}`}>▾</span>
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="history-list">
+                        {monthTransactions.map((transaction) => (
+                          <div key={transaction.id} className="history-item">
+                            {editingId === transaction.id ? (
+                              <div>
+                                <input value={editForm.text}
+                                  onChange={(e) => setEditForm({ ...editForm, text: e.target.value })}
+                                  className="fin-input" />
+                                <select value={editForm.type}
+                                  onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                                  className="fin-input">
+                                  <option value="expense">Expense</option>
+                                  <option value="income">Income</option>
+                                </select>
+                                <select value={editForm.category}
+                                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                                  className="fin-input">
+                                  <option value="">Select category</option>
+                                  <option value="Income">Income</option>
+                                  <option value="Travel">Travel (business)</option>
+                                  <option value="Fuel">Fuel (business)</option>
+                                  <option value="Office">Office costs</option>
+                                  <option value="Phone">Phone & internet</option>
+                                  <option value="Software">Software & subscriptions</option>
+                                  <option value="Marketing">Marketing & advertising</option>
+                                  <option value="Professional fees">Professional fees</option>
+                                  <option value="Training">Training & CPD</option>
+                                  <option value="Utilities">Utilities (business)</option>
+                                  <option value="Insurance">Business insurance</option>
+                                  <option value="Stock">Stock & materials</option>
+                                  <option value="Wages">Staff & wages</option>
+                                  <option value="Bank charges">Bank charges</option>
+                                  <option value="Rent">Rent (business premises)</option>
+                                  <option value="Food">Food & drink</option>
+                                  <option value="Clothing">Clothing</option>
+                                  <option value="Groceries">Groceries</option>
+                                  <option value="Mortgage">Mortgage</option>
+                                  <option value="Personal">Personal (non-business)</option>
+                                  <option value="Entertainment">Client entertainment</option>
+                                  <option value="Misc">Miscellaneous</option>
+                                </select>
+                                <input value={editForm.amount}
+                                  onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                                  className="fin-input" />
+                                <input type="date" value={editForm.date}
+                                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                                  className="fin-input" />
+                                <div className="button-group">
+                                  <button onClick={() => saveEdit(transaction.id)} className="primary-button">Save</button>
+                                  <button onClick={cancelEdit} className="secondary-button">Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="history-item-inner">
+                                <div className="history-left">
+                                  <div className="history-title">{transaction.text}</div>
+                                  <div className="history-meta">{new Date(transaction.date).toLocaleDateString()}</div>
+
+                                  <div className="history-chip-row">
+                                    <span className={`category-chip ${getCategoryColor(transaction.category)}`}>
+                                      {transaction.category}
+                                    </span>
+                                    <span className={`type-chip ${transaction.type === "income" ? "type-income" : "type-expense"}`}>
+                                      {transaction.type}
+                                    </span>
+
+                                    {/* ── HMRC STATUS BADGE ── */}
+                                    {transaction.type !== "income" && (() => {
+                                      const status = transaction.hmrcStatus;
+                                      if (status === "overridden") {
+                                        return (
+                                          <span className="hmrc-badge hmrc-badge-overridden" title={transaction.hmrcOverrideReason}>
+                                            ✓ Allowable
+                                          </span>
+                                        );
+                                      }
+                                      if (status === "personal") {
+                                        return <span className="hmrc-badge hmrc-badge-personal">Personal</span>;
+                                      }
+                                      if (status === "recategorised") return null;
+                                      const allowability = getCategoryAllowability(transaction.category);
+                                      if (allowability === "never") {
+                                        return <span className="hmrc-badge hmrc-badge-never">🚨 Not allowable</span>;
+                                      }
+                                      if (allowability === "conditional") {
+                                        return <span className="hmrc-badge hmrc-badge-conditional">⚠️ Check HMRC</span>;
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+
+                                  {/* ── HMRC QUICK ACTIONS ── */}
+                                  {transaction.type !== "income" && (() => {
+                                    const allowability = getCategoryAllowability(transaction.category);
+                                    const status = transaction.hmrcStatus;
+                                    if (status === "overridden") {
+                                      return (
+                                        <div className="hmrc-allowable-confirmed">
+                                          <span style={{ fontSize: "12px", color: "#065f46" }}>
+                                            ✓ {transaction.hmrcOverrideReason}
+                                          </span>
+                                        </div>
+                                      );
+                                    }
+                                    if (status === "personal") return null;
+                                    if (status === "recategorised") return null;
+                                    if (allowability === "never" || allowability === "conditional") {
+                                      return (
+                                        <div className="hmrc-quick-actions">
+                                          <button
+                                            className="hmrc-quick-btn hmrc-quick-allowable"
+                                            onClick={() => setHmrcFlagTransaction({ ...transaction, quickMode: "confirm" })}
+                                            type="button"
+                                          >
+                                            + Add to allowable
+                                          </button>
+                                          <button
+                                            className="hmrc-quick-btn hmrc-quick-personal"
+                                            onClick={() => handleHmrcMarkPersonal(transaction.id)}
+                                            type="button"
+                                          >
+                                            Move to personal
+                                          </button>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
+
+                                <div className="history-right">
+                                  <div className="history-amount">{formatCurrency(transaction.amount)}</div>
+                                  <div className="button-group history-actions">
+                                    <button onClick={() => startEditing(transaction)} className="secondary-button small-button">Edit</button>
+                                    <button onClick={() => deleteTransaction(transaction.id)} className="secondary-button small-button">Delete</button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {showBackToTop && (
+          <button className="back-to-top" onClick={scrollToTop}>↑ Top</button>
+        )}
+
+        {/* ── HMRC FLAG MODAL ── */}
+        {hmrcFlagTransaction && (
+          <HMRCFlagModal
+            transaction={hmrcFlagTransaction}
+            onOverride={handleHmrcOverride}
+            onRecategorise={handleHmrcRecategorise}
+            onMarkPersonal={handleHmrcMarkPersonal}
+            onClose={handleHmrcDismiss}
+          />
+        )}
+
       </div>
     </div>
   );

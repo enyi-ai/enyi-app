@@ -1,0 +1,309 @@
+/* ============================================
+   HMRC FLAG MODAL — PREMIUM
+   ============================================ */
+
+.hmrc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 17, 31, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: fadeOverlay 0.2s ease;
+}
+
+@keyframes fadeOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hmrc-modal {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 0;
+  width: 100%;
+  max-width: 480px;
+  box-shadow:
+    0 24px 60px rgba(9, 17, 31, 0.2),
+    0 4px 16px rgba(9, 17, 31, 0.1);
+  overflow: hidden;
+  animation: slideModal 0.22s ease;
+}
+
+@keyframes slideModal {
+  from { opacity: 0; transform: translateY(-16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.hmrc-modal-header {
+  padding: 24px 24px 20px;
+  border-left: 4px solid #ef4444;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.hmrc-modal-badge {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+}
+
+.hmrc-modal-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #09111f;
+}
+
+.hmrc-modal-transaction {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* HMRC note */
+.hmrc-modal-note {
+  margin: 0;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.hmrc-modal-note p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* Action buttons */
+.hmrc-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px 0;
+}
+
+.hmrc-action-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 16px 24px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 15px;
+  font-weight: 700;
+  color: #09111f;
+}
+
+.hmrc-action-button:last-child {
+  border-bottom: none;
+}
+
+.hmrc-action-button span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.hmrc-action-button:hover {
+  background: #f8fafc;
+}
+
+.hmrc-action-recategorise { color: #1d4ed8; }
+.hmrc-action-personal { color: #047857; }
+.hmrc-action-override { color: #b45309; }
+
+/* Override block */
+.hmrc-override-block {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hmrc-override-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #09111f;
+}
+
+.hmrc-override-textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  font-size: 14px;
+  font-family: Inter, Arial, sans-serif;
+  color: #09111f;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.hmrc-override-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.hmrc-override-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.hmrc-override-buttons .primary-button,
+.hmrc-override-buttons .secondary-button {
+  flex: 1;
+}
+
+.hmrc-error {
+  margin: 0;
+  font-size: 13px;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* Dismiss */
+.hmrc-dismiss {
+  width: 100%;
+  border: none;
+  background: #f8fafc;
+  color: #6b7280;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-top: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.hmrc-dismiss:hover {
+  background: #eef2f7;
+  color: #09111f;
+}
+
+/* Badge on transaction */
+.hmrc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.hmrc-badge:hover {
+  opacity: 0.8;
+}
+
+.hmrc-badge-never {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.hmrc-badge-conditional {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+.hmrc-badge-overridden {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.hmrc-badge-personal {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #a5b4fc;
+}
+
+@media (max-width: 768px) {
+  .hmrc-modal {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .hmrc-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+}
+/* Quick action buttons on transaction row */
+.hmrc-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.hmrc-quick-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: Inter, Arial, sans-serif;
+}
+
+.hmrc-quick-allowable {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.hmrc-quick-allowable:hover {
+  background: #bbf7d0;
+  transform: translateY(-1px);
+}
+
+.hmrc-quick-personal {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #a5b4fc;
+}
+
+.hmrc-quick-personal:hover {
+  background: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+.hmrc-allowable-confirmed {
+  margin-top: 6px;
+}
+
+.hmrc-quick-intro {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #374151;
+  margin: 0 0 16px 0;
+  padding: 12px 16px;
+  background: #f0fdf9;
+  border-radius: 12px;
+  border-left: 3px solid #2fe1c2;
+}
+
+/* Allowable action button in modal */
+.hmrc-action-allowable {
+  color: #065f46;
+  border-bottom: 1px solid #f1f5f9;
+}
