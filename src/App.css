@@ -1572,3 +1572,72 @@ img { display: block; max-width: 100%; }
   border: 1px solid rgba(47, 225, 194, 0.3);
   background: linear-gradient(160deg, #ffffff 0%, #f2faf8 100%);
 }
+/* ── MOBILE CATEGORY SECTION FIX ── */
+@media (max-width: 768px) {
+  .cat-section-header {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .cat-section-header-left {
+    gap: 8px;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .cat-section-label {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cat-section-count {
+    font-size: 11px;
+    padding: 2px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .cat-section-header-right {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .cat-section-total {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .cat-section-dot {
+    flex-shrink: 0;
+  }
+
+  .cat-section-body {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .cat-section-note {
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+
+  .chart-row-clickable {
+    padding: 3px 4px;
+    margin: -3px -4px;
+  }
+
+  .cat-label {
+    font-size: 13px;
+  }
+
+  .cat-amount {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .category-sections {
+    gap: 6px;
+  }
+}
