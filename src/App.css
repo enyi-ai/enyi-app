@@ -1555,3 +1555,20 @@ img { display: block; max-width: 100%; }
   .app-shell .brand-tagline { font-size: 13px !important; }
   .app-shell .brand-icon-tile { width: 68px !important; height: 68px !important; }
 }
+.stat-card-profit {
+  background: linear-gradient(160deg, #ffffff 0%, #f4fbf9 100%);
+  border: 1px solid rgba(47, 225, 194, 0.22);
+  box-shadow: 0 4px 16px rgba(47, 225, 194, 0.08);
+}
+
+.stat-value-green {
+  color: #065f46;
+}
+
+.stat-value-red {
+  color: #b91c1c;
+}
+.stat-card-profit {
+  border: 1px solid rgba(47, 225, 194, 0.3);
+  background: linear-gradient(160deg, #ffffff 0%, #f2faf8 100%);
+}

@@ -1180,42 +1180,50 @@ const personalCategories = new Set(
               </div>
               <div className="brand-chip">Live</div>
             </div>
-            <div className="stat-grid">
-              <div className="stat-card">
-                <span className="stat-label">Income</span>
-                <span className="stat-value">{formatCurrency(totalIncome)}</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Total expenses</span>
-                <span className="stat-value">{formatCurrency(totalExpenses)}</span>
-              </div>
-              <div className="stat-card highlight-card" style={{ borderColor: "#10b981" }}>
-                <span className="stat-label">HMRC allowable expenses</span>
-                <span className="stat-value" style={{ color: "#065f46" }}>{formatCurrency(allowableExpenses)}</span>
-              </div>
-              {nonAllowableExpenses > 0 && (
-                <div className="stat-card" style={{ background: "#fff5f5", borderColor: "#fca5a5" }}>
-                  <span className="stat-label">Non-allowable (excluded from tax)</span>
-                  <span className="stat-value" style={{ color: "#b91c1c" }}>{formatCurrency(nonAllowableExpenses)}</span>
-                </div>
-              )}
-              <div className="stat-card">
-                <span className="stat-label">Profit</span>
-                <span className="stat-value">{formatCurrency(profit)}</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Transactions</span>
-                <span className="stat-value">{financialYearTransactions.length}</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Monthly income</span>
-                <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Monthly expenses</span>
-                <span className="stat-value">{formatCurrency(monthlyExpenses)}</span>
-              </div>
-            </div>
+ <div className="stat-grid">
+  <div className="stat-card">
+    <span className="stat-label">Income</span>
+    <span className="stat-value">{formatCurrency(totalIncome)}</span>
+  </div>
+
+  <div className="stat-card">
+    <span className="stat-label">Total expenses</span>
+    <span className="stat-value">{formatCurrency(totalExpenses)}</span>
+  </div>
+
+  <div className="stat-card stat-card-profit">
+    <span className="stat-label">Profit</span>
+    <span className="stat-value">{formatCurrency(profit)}</span>
+  </div>
+
+  <div className="stat-card">
+    <span className="stat-label">Transactions</span>
+    <span className="stat-value">{financialYearTransactions.length}</span>
+  </div>
+
+  <div className="stat-card">
+    <span className="stat-label">HMRC allowable expenses</span>
+    <span className="stat-value stat-value-green">{formatCurrency(allowableExpenses)}</span>
+  </div>
+
+  {nonAllowableExpenses > 0 && (
+    <div className="stat-card">
+      <span className="stat-label">Not tax-deductible</span>
+      <span className="stat-value stat-value-red">{formatCurrency(nonAllowableExpenses)}</span>
+    </div>
+  )}
+
+  <div className="stat-card">
+    <span className="stat-label">Monthly income</span>
+    <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
+  </div>
+
+  <div className="stat-card">
+    <span className="stat-label">Monthly expenses</span>
+    <span className="stat-value">{formatCurrency(monthlyExpenses)}</span>
+  </div>
+</div>
+
             <div className="button-group top-space">
               <select className="fin-input" value={csvRange} onChange={(e) => setCsvRange(e.target.value)}>
                 <option value="all">All records</option>
