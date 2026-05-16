@@ -1445,6 +1445,24 @@ img { display: block; max-width: 100%; }
   }
 
   .app-shell { padding: 16px 12px 48px; }
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 14px 16px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    letter-spacing: -0.03em;
+  }
 
   .brand-name { font-size: 36px; }
 
