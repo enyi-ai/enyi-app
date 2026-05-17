@@ -1,0 +1,185 @@
+/* ============================================
+   SETTINGS MODAL
+   ============================================ */
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 17, 31, 0.5);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: fadeOverlay 0.18s ease;
+}
+
+.settings-modal {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow:
+    0 24px 60px rgba(9, 17, 31, 0.18),
+    0 4px 14px rgba(9, 17, 31, 0.08);
+  overflow: hidden;
+  animation: slideUp 0.2s ease;
+}
+
+/* Header */
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #09111f;
+}
+
+.settings-close {
+  border: none;
+  background: #f1f5f9;
+  color: #6b7280;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.settings-close:hover {
+  background: #e2e8f0;
+  color: #09111f;
+}
+
+/* Section */
+.settings-section {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.settings-section-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.settings-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #09111f;
+  margin-bottom: 4px;
+}
+
+.settings-section-desc {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.55;
+}
+
+/* Input */
+.settings-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  background: #ffffff;
+}
+
+.settings-input-wrap:focus-within {
+  border-color: #2fe1c2;
+  box-shadow: 0 0 0 3px rgba(47, 225, 194, 0.12);
+}
+
+.settings-currency {
+  padding: 0 4px 0 16px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #09111f;
+  user-select: none;
+}
+
+.settings-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 14px 16px 14px 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #09111f;
+  font-family: inherit;
+  background: transparent;
+}
+
+.settings-input::placeholder {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.settings-error {
+  margin: 0;
+  font-size: 13px;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.settings-save-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 14px;
+}
+
+/* Divider */
+.settings-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 0;
+}
+
+/* Info */
+.settings-info {
+  padding: 16px 24px 22px;
+}
+
+.settings-info p {
+  margin: 0;
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .settings-modal {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .settings-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+}

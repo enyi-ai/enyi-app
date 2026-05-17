@@ -2136,4 +2136,44 @@ html, body, #root {
   color: #b91c1c;
 }
 
+/* ── HERO GOAL BLOCK ── */
+.hero-goal-block {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hero-goal-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.hero-goal-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+.hero-goal-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.hero-goal-prompt {
+  margin: 14px 0 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: color 0.15s ease;
+  font-weight: 600;
+}
+
+.hero-goal-prompt:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
 

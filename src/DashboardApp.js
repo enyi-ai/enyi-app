@@ -10,6 +10,7 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  getDoc,               
 } from "firebase/firestore";
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -20,6 +21,10 @@ import { FiMenu } from "react-icons/fi";
 import HMRCFlagModal from "./components/HMRCFlagModal";
 import { shouldFlag, getCategoryAllowability } from "./hmrcRules";
 import "./components/HMRCFlagModal.css";
+import GoalSetupModal from "./components/GoalSetupModal";
+import SettingsModal from "./components/SettingsModal";
+import "./components/GoalSetupModal.css";
+import "./components/SettingsModal.css";
 
 function getCurrentFinancialYear() {
   const today = new Date();
@@ -65,6 +70,11 @@ function App() {
   const [transactions, setTransactions] = useState([]);
   const [, setInsights] = useState([]);
   const [showInsight, setShowInsight] = useState(false);
+  const [goalProfit, setGoalProfit] = useState(null);
+const [showGoalSetup, setShowGoalSetup] = useState(false);
+const [showSettings, setShowSettings] = useState(false);
+const [goalLoaded, setGoalLoaded] = useState(false);
+
 
   const [expandedCategories, setExpandedCategories] = useState({
   always: true,
@@ -150,6 +160,32 @@ const toggleCategorySection = (section) => {
     loadTransactions();
   }, [currentUser]);
 
+  // ── LOAD GOAL FROM FIRESTORE ──
+useEffect(() => {
+  const loadGoal = async () => {
+    if (!currentUser || goalLoaded) return;
+    try {
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const fyKey = `goalProfit_${selectedFinancialYear.replace("/", "_")}`;
+
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data();
+        if (data[fyKey]) {
+          setGoalProfit(data[fyKey]);
+        } else {
+          setTimeout(() => setShowGoalSetup(true), 1200);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load goal:", error);
+    }
+    setGoalLoaded(true);
+  };
+
+  loadGoal();
+}, [currentUser, goalLoaded, selectedFinancialYear]);
+
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-GB", {
       style: "currency",
@@ -227,6 +263,27 @@ const toggleCategorySection = (section) => {
       end: new Date(`${endYear}-04-05T23:59:59`)
     };
   };
+  // ── GOAL HANDLERS ──
+const handleSaveGoal = async (amount) => {
+  if (!currentUser) return;
+  try {
+    const fyKey = `goalProfit_${selectedFinancialYear.replace("/", "_")}`;
+    const userDocRef = doc(db, "users", currentUser.uid);
+    await updateDoc(userDocRef, { [fyKey]: amount });
+    setGoalProfit(amount);
+    setShowGoalSetup(false);
+    setShowSettings(false);
+  } catch (error) {
+    console.error("Failed to save goal:", error);
+  }
+};
+
+const handleSkipGoal = () => {
+  setShowGoalSetup(false);
+};
+
+// ── HMRC HANDLERS ── (line 262 continues here)
+
 
   // ── HMRC HANDLERS ──
   const handleHmrcOverride = async (transactionId, reason) => {
@@ -708,7 +765,8 @@ const personalCategories = new Set(
   const today = new Date();
   const fyStartDate = new Date(`${selectedFinancialYear.split("/")[0]}-04-06`);
   const daysElapsed = Math.max(1, Math.floor((today - fyStartDate) / (1000 * 60 * 60 * 24)));
-  const profitMargin = totalIncome > 0 ? Math.round((profit / totalIncome) * 100) : 0;
+  const profitMargin = totalIncome > 0 ? Math.round((taxableProfit / totalIncome) * 100) : 0;
+
   const topCatAnnualised = topSpendCategory
     ? Math.round((topSpendCategory[1] / daysElapsed) * 365) : 0;
 
@@ -756,6 +814,32 @@ const personalCategories = new Set(
       `📊 Your profit margin is ${profitMargin}% (${formatCurrency(profit)} profit on ${formatCurrency(totalIncome)} income). ${marginComment}`
     );
   }
+
+  // ── GOAL COACHING ──
+if (goalProfit && goalProfit > 0) {
+const goalPercent = Math.round((taxableProfit / goalProfit) * 100);
+const remaining = goalProfit - taxableProfit;
+
+  const fyEnd = new Date(`20${selectedFinancialYear.split("/")[1]}-04-05`);
+  const daysLeft = Math.max(0, Math.floor((fyEnd - new Date()) / (1000 * 60 * 60 * 24)));
+  const monthsLeft = Math.max(1, Math.round(daysLeft / 30));
+  const neededPerMonth = remaining > 0 ? Math.round(remaining / monthsLeft) : 0;
+
+  if (profit >= goalProfit) {
+    narrativeParts.push(
+      `🎉 Goal achieved: You've hit your ${formatCurrency(goalProfit)} profit goal for ${selectedFinancialYear}. Outstanding work. Consider setting a stretch target in Settings.`
+    );
+  } else if (goalPercent >= 70) {
+    narrativeParts.push(
+      `🎯 Goal progress: You're ${goalPercent}% toward your ${formatCurrency(goalProfit)} goal. ${formatCurrency(remaining)} remaining — you need ${formatCurrency(neededPerMonth)} profit per month over the next ${monthsLeft} months to hit your target.`
+    );
+  } else {
+    narrativeParts.push(
+      `⚠️ Goal alert: You're ${goalPercent}% toward your ${formatCurrency(goalProfit)} annual goal. To get back on track you need ${formatCurrency(neededPerMonth)} profit per month for the next ${monthsLeft} months. Review your biggest expense categories below.`
+    );
+  }
+}
+
 
   const today12m = new Date();
   const twelveMonthsAgo = new Date();
@@ -1003,7 +1087,12 @@ const personalCategories = new Set(
                 <button onClick={() => scrollToSection("enyi-ai")}>Enyi AI</button>
                 <button onClick={() => scrollToSection("transaction-history")}>Transaction History</button>
                 <div className="nav-divider" />
-                <button className="nav-signout" onClick={handleSignOut}>Sign Out</button>
+<button onClick={() => { setShowSettings(true); setMenuOpen(false); }}>
+  ⚙️ Settings
+</button>
+<div className="nav-divider" />
+<button className="nav-signout" onClick={handleSignOut}>Sign Out</button>
+
               </div>
             )}
           </div>
@@ -1019,33 +1108,87 @@ const personalCategories = new Set(
             </div>
             <div className="hero-right">
               <div className="hero-balance-card">
-                <span className="hero-balance-label">Net position</span>
-                <h3 className="hero-balance-value">{formatCurrency(profit)}</h3>
-                <p className="hero-balance-meta">
-                  Income {formatCurrency(totalIncome)} • Expenses {formatCurrency(totalExpenses)}
-                </p>
-              </div>
+  <span className="hero-balance-label">Profit this year</span>
+<h3 className="hero-balance-value">{formatCurrency(taxableProfit)}</h3>
+<p style={{
+  margin: "4px 0 0 0",
+  fontSize: "12px",
+  color: "rgba(255,255,255,0.5)",
+  fontWeight: 500
+}}>
+  After business expenses only
+</p>
+
+  {goalProfit ? (
+    <div className="hero-goal-block">
+      <div className="hero-goal-track">
+        <div
+          className="hero-goal-fill"
+          style={{
+            width: `${Math.min((taxableProfit / goalProfit) * 100, 100)}%`,
+            background: profit >= goalProfit
+              ? "#10b981"
+              : profit >= goalProfit * 0.7
+              ? "#2fe1c2"
+              : "#f59e0b"
+          }}
+        />
+      </div>
+      <p className="hero-goal-text">
+        {profit >= goalProfit ? (
+          <span style={{ color: "#10b981", fontWeight: 700 }}>
+            🎉 Goal reached! You hit your {formatCurrency(goalProfit)} target
+          </span>
+        ) : (
+          <span style={{ color: "rgba(255,255,255,0.7)" }}>
+  {Math.round((taxableProfit / goalProfit) * 100)}% of your{" "}
+  £{Number(goalProfit).toLocaleString("en-GB")} goal
+  {" • "}
+  {formatCurrency(goalProfit - taxableProfit)} to go
+</span>
+
+        )}
+      </p>
+    </div>
+  ) : (
+    <p
+      className="hero-goal-prompt"
+      onClick={() => setShowGoalSetup(true)}
+    >
+      + Set your profit goal for {selectedFinancialYear}
+    </p>
+  )}
+</div>
             </div>
           </div>
         </section>
 
         <section className="overview-strip">
           <div className="overview-pill">
-            <span className="overview-kicker">Income</span>
-            <strong>{formatCurrency(totalIncome)}</strong>
-          </div>
-          <div className="overview-pill">
-            <span className="overview-kicker">Expenses</span>
-            <strong>{formatCurrency(totalExpenses)}</strong>
-          </div>
-          <div className="overview-pill">
-            <span className="overview-kicker">Transactions</span>
-            <strong>{financialYearTransactions.length}</strong>
-          </div>
-          <div className="overview-pill">
-            <span className="overview-kicker">This month</span>
-            <strong>{formatCurrency(monthlyProfit)}</strong>
-          </div>
+  <span className="overview-kicker">This Year's Income</span>
+  <strong>{formatCurrency(totalIncome)}</strong>
+</div>
+
+<div className="overview-pill">
+  <span className="overview-kicker">Business Expenses</span>
+  <strong>{formatCurrency(allowableExpenses)}</strong>
+</div>
+
+<div className="overview-pill">
+  <span className="overview-kicker">
+    {new Date().toLocaleString("en-GB", { month: "long" })}'s Profit
+  </span>
+  <strong>{formatCurrency(monthlyProfit)}</strong>
+</div>
+
+<div className="overview-pill">
+  <span className="overview-kicker">Tax Pot this month</span>
+  <strong>
+    {formatCurrency(monthlyTaxPot)}
+  </strong>
+</div>
+
+
         </section>
 
         <section className="insight-strip">
@@ -1711,6 +1854,24 @@ const personalCategories = new Set(
             onClose={handleHmrcDismiss}
           />
         )}
+{/* GOAL SETUP MODAL */}
+{showGoalSetup && (
+  <GoalSetupModal
+    financialYear={selectedFinancialYear}
+    onSave={handleSaveGoal}
+    onSkip={handleSkipGoal}
+  />
+)}
+
+{/* SETTINGS MODAL */}
+{showSettings && (
+  <SettingsModal
+    currentGoal={goalProfit}
+    financialYear={selectedFinancialYear}
+    onSave={handleSaveGoal}
+    onClose={() => setShowSettings(false)}
+  />
+)}
 
       </div>
     </div>

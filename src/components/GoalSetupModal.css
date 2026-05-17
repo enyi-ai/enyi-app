@@ -1,0 +1,160 @@
+/* ============================================
+   GOAL SETUP MODAL
+   ============================================ */
+
+.goal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 17, 31, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  animation: fadeOverlay 0.2s ease;
+}
+
+@keyframes fadeOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.goal-modal {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow:
+    0 24px 60px rgba(9, 17, 31, 0.2),
+    0 4px 16px rgba(9, 17, 31, 0.08);
+  animation: slideUp 0.22s ease;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.goal-modal-icon {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.goal-modal-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #09111f;
+  line-height: 1.2;
+}
+
+.goal-modal-desc {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.65;
+  max-width: 360px;
+}
+
+.goal-modal-input-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 2px solid #dbe3ee;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  background: #ffffff;
+}
+
+.goal-modal-input-wrap:focus-within {
+  border-color: #2fe1c2;
+  box-shadow: 0 0 0 4px rgba(47, 225, 194, 0.12);
+}
+
+.goal-modal-currency {
+  padding: 0 6px 0 18px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #09111f;
+  user-select: none;
+}
+
+.goal-modal-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 16px 18px 16px 4px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #09111f;
+  font-family: inherit;
+  background: transparent;
+  width: 100%;
+}
+
+.goal-modal-input::placeholder {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.goal-modal-error {
+  margin: 0;
+  font-size: 13px;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.goal-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.goal-modal-actions .primary-button {
+  width: 100%;
+  padding: 16px;
+  font-size: 15px;
+}
+
+.goal-modal-skip {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px;
+  font-family: inherit;
+  transition: color 0.15s ease;
+}
+
+.goal-modal-skip:hover { color: #09111f; }
+
+.goal-modal-note {
+  margin: 0;
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .goal-modal {
+    padding: 28px 22px 22px;
+    border-radius: 20px;
+  }
+
+  .goal-modal-title { font-size: 20px; }
+  .goal-modal-currency { font-size: 20px; }
+  .goal-modal-input { font-size: 20px; }
+}
