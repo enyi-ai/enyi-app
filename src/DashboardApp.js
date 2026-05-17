@@ -1212,98 +1212,171 @@ const remaining = goalProfit - taxableProfit;
           </div>
         )}
 
-        <section className="top-grid">
-          <div id="add-transaction" className="fin-card">
-            <div className="section-head">
-              <h2>Add Transaction</h2>
-              <p>Quickly log income or expenses</p>
-            </div>
-            <select value={transactionType} onChange={(e) => setTransactionType(e.target.value)} className="fin-input">
-              <option value="expense">Expense</option>
-              <option value="income">Income</option>
-            </select>
-            <input
-              type="text"
-              placeholder={transactionType === "income" ? "Enter income (e.g Fees 350)" : "Enter expense (e.g Uber 25)"}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="fin-input"
-            />
-            <input type="date" value={transactionDate} onChange={(e) => setTransactionDate(e.target.value)} className="fin-input" />
-            <button onClick={addTransaction} className="primary-button">Add Transaction</button>
-            {statusMessage && <p className="status-text">{statusMessage}</p>}
-            {transactionSuccessMessage && <p className="success-text">{transactionSuccessMessage}</p>}
-          </div>
+<section className="top-grid">
 
-          <div id="receipts" className="fin-card">
-            <div className="section-head">
-              <h2>Receipts</h2>
-              <p>Capture or upload receipts instantly</p>
-            </div>
-            <div className="receipt-actions">
-              <label className="primary-button action-button">
-                Take Receipt Photo
-                <input ref={cameraInputRef} type="file" accept="image/*" capture="environment"
-                  onChange={(e) => handleReceiptSelection(e.target.files[0])} style={{ display: "none" }} />
-              </label>
-              <label className="secondary-button action-button">
-                Upload Receipt File
-                <input ref={fileInputRef} type="file" accept="image/*,.pdf"
-                  onChange={(e) => handleReceiptSelection(e.target.files[0])} style={{ display: "none" }} />
-              </label>
-            </div>
-            {receiptFile && (
-              <div className="receipt-selected-box">
-                <p className="receipt-selected-text">Selected: {receiptFile.name}</p>
-                {receiptFile.type.startsWith("image/") && (
-                  <img src={URL.createObjectURL(receiptFile)} alt="Receipt preview" className="receipt-preview-image" />
-                )}
-                <button onClick={handleReceiptUpload} className="primary-button">Upload Receipt</button>
-              </div>
-            )}
-            {receiptStatus && <p className="status-text">{receiptStatus}</p>}
-            {receiptSuccessMessage && <p className="success-text">{receiptSuccessMessage}</p>}
-            {showReceiptReview && receiptPreview && (
-              <div className="review-box">
-                <h3>Review receipt</h3>
-                <input className="fin-input" value={receiptPreview.merchant}
-                  onChange={(e) => setReceiptPreview({ ...receiptPreview, merchant: e.target.value })} placeholder="Merchant" />
-                <input className="fin-input" value={receiptPreview.amount}
-                  onChange={(e) => setReceiptPreview({ ...receiptPreview, amount: e.target.value })} placeholder="Amount" />
-                <input className="fin-input" value={receiptPreview.date}
-                  onChange={(e) => setReceiptPreview({ ...receiptPreview, date: e.target.value })} placeholder="Date" />
-                <select className="fin-input" value={receiptPreview.category}
-                  onChange={(e) => setReceiptPreview({ ...receiptPreview, category: e.target.value })}>
-                  <option value="Travel">Travel (business)</option>
-                  <option value="Fuel">Fuel (business)</option>
-                  <option value="Office">Office costs</option>
-                  <option value="Phone">Phone & internet</option>
-                  <option value="Software">Software & subscriptions</option>
-                  <option value="Marketing">Marketing & advertising</option>
-                  <option value="Professional fees">Professional fees</option>
-                  <option value="Training">Training & CPD</option>
-                  <option value="Utilities">Utilities (business)</option>
-                  <option value="Insurance">Business insurance</option>
-                  <option value="Stock">Stock & materials</option>
-                  <option value="Wages">Staff & wages</option>
-                  <option value="Bank charges">Bank charges</option>
-                  <option value="Rent">Rent (business premises)</option>
-                  <option value="Food">Food & drink</option>
-                  <option value="Clothing">Clothing</option>
-                  <option value="Groceries">Groceries</option>
-                  <option value="Mortgage">Mortgage</option>
-                  <option value="Personal">Personal (non-business)</option>
-                  <option value="Entertainment">Client entertainment</option>
-                  <option value="Misc">Miscellaneous</option>
-                </select>
-                <div className="button-group">
-                  <button onClick={confirmReceiptSave} className="primary-button">Confirm Save</button>
-                  <button onClick={cancelReceiptReview} className="secondary-button">Cancel</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
+  {/* ── ADD TRANSACTION ── */}
+  <div id="add-transaction" className="fin-card action-card">
+    <div className="action-card-header">
+      <div className="action-card-icon-wrap">
+        <span className="action-card-icon">＋</span>
+      </div>
+      <div>
+        <h2 className="action-card-title">Add Transaction</h2>
+        <p className="action-card-sub">Log income or expenses instantly</p>
+      </div>
+    </div>
+
+    <div className="action-type-toggle">
+      <button
+        className={`toggle-btn ${transactionType === "expense" ? "toggle-active" : ""}`}
+        onClick={() => setTransactionType("expense")}
+        type="button"
+      >
+        Expense
+      </button>
+      <button
+        className={`toggle-btn ${transactionType === "income" ? "toggle-active" : ""}`}
+        onClick={() => setTransactionType("income")}
+        type="button"
+      >
+        Income
+      </button>
+    </div>
+
+    <input
+      type="text"
+      placeholder={transactionType === "income"
+        ? "e.g. Client fee £350"
+        : "e.g. Uber £25"}
+      value={input}
+      onChange={(e) => setInput(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && addTransaction()}
+      className="fin-input action-input"
+    />
+
+    <input
+      type="date"
+      value={transactionDate}
+      onChange={(e) => setTransactionDate(e.target.value)}
+      className="fin-input"
+    />
+
+    <button onClick={addTransaction} className="primary-button action-submit-btn">
+      Add {transactionType === "income" ? "Income" : "Expense"}
+    </button>
+
+    {statusMessage && <p className="status-text">{statusMessage}</p>}
+    {transactionSuccessMessage && (
+      <p className="success-text">{transactionSuccessMessage}</p>
+    )}
+  </div>
+
+  {/* ── RECEIPTS ── */}
+  <div id="receipts" className="fin-card receipt-card">
+    <div className="action-card-header">
+      <div className="action-card-icon-wrap receipt-icon-wrap">
+        <span className="action-card-icon">🧾</span>
+      </div>
+      <div>
+        <h2 className="action-card-title">Receipts</h2>
+        <p className="action-card-sub">Scan or upload — Enyi reads it for you</p>
+      </div>
+    </div>
+
+    <div className="receipt-upload-area">
+      <label className="receipt-upload-btn receipt-camera">
+        <span className="receipt-btn-icon">📷</span>
+        <span className="receipt-btn-label">Take photo</span>
+        <span className="receipt-btn-sub">Use your camera</span>
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => handleReceiptSelection(e.target.files[0])}
+          style={{ display: "none" }}
+        />
+      </label>
+
+      <label className="receipt-upload-btn receipt-file">
+        <span className="receipt-btn-icon">📁</span>
+        <span className="receipt-btn-label">Upload file</span>
+        <span className="receipt-btn-sub">Image or PDF</span>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,.pdf"
+          onChange={(e) => handleReceiptSelection(e.target.files[0])}
+          style={{ display: "none" }}
+        />
+      </label>
+    </div>
+
+    {receiptFile && (
+      <div className="receipt-selected-box">
+        <p className="receipt-selected-text">📎 {receiptFile.name}</p>
+        {receiptFile.type.startsWith("image/") && (
+          <img
+            src={URL.createObjectURL(receiptFile)}
+            alt="Receipt preview"
+            className="receipt-preview-image"
+          />
+        )}
+        <button onClick={handleReceiptUpload} className="primary-button">
+          Read this receipt
+        </button>
+      </div>
+    )}
+
+    {receiptStatus && <p className="status-text">{receiptStatus}</p>}
+    {receiptSuccessMessage && <p className="success-text">{receiptSuccessMessage}</p>}
+
+    {showReceiptReview && receiptPreview && (
+      <div className="review-box">
+        <h3>Review receipt</h3>
+        <input className="fin-input" value={receiptPreview.merchant}
+          onChange={(e) => setReceiptPreview({ ...receiptPreview, merchant: e.target.value })}
+          placeholder="Merchant" />
+        <input className="fin-input" value={receiptPreview.amount}
+          onChange={(e) => setReceiptPreview({ ...receiptPreview, amount: e.target.value })}
+          placeholder="Amount" />
+        <input className="fin-input" value={receiptPreview.date}
+          onChange={(e) => setReceiptPreview({ ...receiptPreview, date: e.target.value })}
+          placeholder="Date" />
+        <select className="fin-input" value={receiptPreview.category}
+          onChange={(e) => setReceiptPreview({ ...receiptPreview, category: e.target.value })}>
+          <option value="Travel">Travel (business)</option>
+          <option value="Fuel">Fuel (business)</option>
+          <option value="Office">Office costs</option>
+          <option value="Phone">Phone & internet</option>
+          <option value="Software">Software & subscriptions</option>
+          <option value="Marketing">Marketing & advertising</option>
+          <option value="Professional fees">Professional fees</option>
+          <option value="Training">Training & CPD</option>
+          <option value="Utilities">Utilities (business)</option>
+          <option value="Insurance">Business insurance</option>
+          <option value="Stock">Stock & materials</option>
+          <option value="Wages">Staff & wages</option>
+          <option value="Bank charges">Bank charges</option>
+          <option value="Rent">Rent (business premises)</option>
+          <option value="Food">Food & drink</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Groceries">Groceries</option>
+          <option value="Mortgage">Mortgage</option>
+          <option value="Personal">Personal (non-business)</option>
+          <option value="Entertainment">Client entertainment</option>
+          <option value="Misc">Miscellaneous</option>
+        </select>
+        <div className="button-group">
+          <button onClick={confirmReceiptSave} className="primary-button">Confirm Save</button>
+          <button onClick={cancelReceiptReview} className="secondary-button">Cancel</button>
+        </div>
+      </div>
+    )}
+  </div>
+
+</section>
+
 
         <section className="two-column-grid">
           <div id="financial-overview" className="fin-card">

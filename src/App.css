@@ -2177,3 +2177,136 @@ html, body, #root {
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* ── ACTION CARDS ── */
+.action-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.action-card-icon-wrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #09111f 0%, #162238 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(9, 17, 31, 0.16);
+}
+
+.receipt-icon-wrap {
+  background: linear-gradient(135deg, #2fe1c2 0%, #0d9488 100%);
+  box-shadow: 0 4px 12px rgba(47, 225, 194, 0.25);
+}
+
+.action-card-icon {
+  font-size: 20px;
+  color: white;
+}
+
+.action-card-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #09111f;
+}
+
+.action-card-sub {
+  margin: 3px 0 0 0;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* ── TRANSACTION TYPE TOGGLE ── */
+.action-type-toggle {
+  display: flex;
+  gap: 0;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 4px;
+}
+
+.toggle-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.toggle-active {
+  background: #ffffff;
+  color: #09111f;
+  box-shadow: 0 2px 8px rgba(9, 17, 31, 0.08);
+}
+
+.action-input {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.action-submit-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 16px;
+  font-size: 15px;
+}
+
+/* ── RECEIPT UPLOAD AREA ── */
+.receipt-upload-area {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.receipt-upload-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 16px;
+  border-radius: 18px;
+  border: 1.5px dashed #dbe3ee;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: center;
+}
+
+.receipt-upload-btn:hover {
+  border-color: #2fe1c2;
+  background: #f0fdf9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(47, 225, 194, 0.12);
+}
+
+.receipt-btn-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.receipt-btn-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: #09111f;
+}
+
+.receipt-btn-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
