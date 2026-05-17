@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./SettingsModal.css";
 
-function SettingsModal({ currentGoal, financialYear, onSave, onClose }) {
+function SettingsModal({ currentGoal, financialYear, onSave, onClose, onClearData }) {
   const [goalInput, setGoalInput] = useState(
     currentGoal ? String(currentGoal) : ""
   );
@@ -71,6 +71,37 @@ function SettingsModal({ currentGoal, financialYear, onSave, onClose }) {
 
         {/* Divider */}
         <div className="settings-divider" />
+
+        {/* Danger zone */}
+<div className="settings-divider" />
+
+<div className="settings-section">
+  <div className="settings-section-header">
+    <span className="settings-section-icon">⚠️</span>
+    <div>
+      <div className="settings-section-title" style={{ color: "#b91c1c" }}>
+        Danger Zone
+      </div>
+      <div className="settings-section-desc">
+        Permanently delete all your transactions. This cannot be undone.
+        Download your CSV first if you need a backup.
+      </div>
+    </div>
+  </div>
+
+  <button
+  className="settings-danger-btn"
+  onClick={() => {
+    onClose();
+    onClearData();
+  }}
+  type="button"
+>
+  Clear all transaction data
+</button>
+
+</div>
+
 
         {/* Info section */}
         <div className="settings-info">

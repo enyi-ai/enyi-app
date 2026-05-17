@@ -41,9 +41,12 @@ function App() {
   const [input, setInput] = useState("");
   const [selectedFinancialYear, setSelectedFinancialYear] = useState(getCurrentFinancialYear());
   const [expandedMonths, setExpandedMonths] = useState({});
-  const [otherIncomeType, setOtherIncomeType] = useState("salary");
-  const [otherIncomeAmount, setOtherIncomeAmount] = useState("");
-  const [otherIncomeSources, setOtherIncomeSources] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+const [otherIncomeType, setOtherIncomeType] = useState("salary");
+
+const [otherIncomeAmount, setOtherIncomeAmount] = useState("");
+const [otherIncomeSources, setOtherIncomeSources] = useState([]);
+
   const [transactionType, setTransactionType] = useState("expense");
   const [transactionDate, setTransactionDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -61,7 +64,14 @@ function App() {
   const [receiptFile, setReceiptFile] = useState(null);
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [showReceiptReview, setShowReceiptReview] = useState(false);
-  const [region] = useState("England / Wales / Northern Ireland");
+
+  const [expandedDrawers, setExpandedDrawers] = useState({
+  business: true,
+  tax: false,
+  monthly: false
+});
+const [snapshotMonth, setSnapshotMonth] = useState(new Date());
+
   const [menuOpen, setMenuOpen] = useState(false);
 
   const cameraInputRef = useRef(null);
@@ -282,7 +292,9 @@ const handleSkipGoal = () => {
   setShowGoalSetup(false);
 };
 
-// ── HMRC HANDLERS ── (line 262 continues here)
+const toggleDrawer = (drawer) => {
+  setExpandedDrawers(prev => ({ ...prev, [drawer]: !prev[drawer] }));
+};
 
 
   // ── HMRC HANDLERS ──
@@ -632,12 +644,15 @@ const handleSkipGoal = () => {
   const nonAllowableExpenses = totalExpenses - allowableExpenses;
   const profit = totalIncome - totalExpenses;
   const taxableProfit = totalIncome - allowableExpenses;
-  const businessProfit = profit;
+  // eslint-disable-next-line no-unused-vars
+const businessProfit = profit;
 
-  const otherIncomeTotal = otherIncomeSources.reduce(
+
+  // eslint-disable-next-line no-unused-vars
+const otherIncomeTotal = otherIncomeSources.reduce(
     (sum, item) => sum + (parseFloat(item.amount) || 0), 0
   );
-  const combinedIncome = businessProfit + otherIncomeTotal;
+ 
 
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -653,10 +668,170 @@ const handleSkipGoal = () => {
     .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
   const monthlyExpenses = monthlyTransactions
-    .filter((t) => t.type !== "income")
-    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  .filter((t) => {
+    if (t.type === "income") return false;
+    if (t.hmrcStatus === "personal") return false;
+    if (t.category === "Personal") return false;
+    const allowability = getCategoryAllowability(t.category);
+    return t.hmrcStatus === "overridden" || allowability !== "never";
+  })
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
-  const monthlyProfit = monthlyIncome - monthlyExpenses;
+const monthlyProfit = monthlyIncome - monthlyExpenses;
+
+// ── SNAPSHOT MONTH CALCULATIONS ──
+const snapshotMonthIndex = snapshotMonth.getMonth();
+const snapshotYear = snapshotMonth.getFullYear();
+
+const snapshotTransactions = transactions.filter(t => {
+  const d = new Date(t.date);
+  return d.getMonth() === snapshotMonthIndex && d.getFullYear() === snapshotYear;
+});
+
+const snapshotIncome = snapshotTransactions
+  .filter(t => t.type === "income")
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+const snapshotExpenses = snapshotTransactions
+  .filter(t => {
+    if (t.type === "income") return false;
+    if (t.hmrcStatus === "personal") return false;
+    if (t.category === "Personal") return false;
+    const allowability = getCategoryAllowability(t.category);
+    return t.hmrcStatus === "overridden" || allowability !== "never";
+  })
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+const snapshotProfit = snapshotIncome - snapshotExpenses;
+
+const prevSnapshotMonth = new Date(snapshotMonth);
+prevSnapshotMonth.setMonth(prevSnapshotMonth.getMonth() - 1);
+const prevMonthIndex = prevSnapshotMonth.getMonth();
+const prevMonthYear = prevSnapshotMonth.getFullYear();
+
+const prevSnapshotTransactions = transactions.filter(t => {
+  const d = new Date(t.date);
+  return d.getMonth() === prevMonthIndex && d.getFullYear() === prevMonthYear;
+});
+
+const prevSnapshotIncome = prevSnapshotTransactions
+  .filter(t => t.type === "income")
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+const prevSnapshotExpenses = prevSnapshotTransactions
+  .filter(t => {
+    if (t.type === "income") return false;
+    if (t.hmrcStatus === "personal") return false;
+    if (t.category === "Personal") return false;
+    const allowability = getCategoryAllowability(t.category);
+    return t.hmrcStatus === "overridden" || allowability !== "never";
+  })
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+const prevSnapshotProfit = prevSnapshotIncome - prevSnapshotExpenses;
+
+const calcChange = (current, previous) => {
+  if (previous === 0) return null;
+  return Math.round(((current - previous) / previous) * 100);
+};
+
+const incomeChangeSnapshot = calcChange(snapshotIncome, prevSnapshotIncome);
+const expenseChangeSnapshot = calcChange(snapshotExpenses, prevSnapshotExpenses);
+const profitChangeSnapshot = calcChange(snapshotProfit, prevSnapshotProfit);
+
+// ── MTD QUARTERLY CALCULATIONS ──
+const getMTDQuarters = (fyLabel) => {
+  const startYear = parseInt(fyLabel.split("/")[0]);
+  return [
+    {
+      label: "Q1",
+      start: new Date(startYear, 3, 6),
+      end: new Date(startYear, 6, 5),
+      deadline: new Date(startYear, 7, 7),
+      period: `6 Apr — 5 Jul ${startYear}`
+    },
+    {
+      label: "Q2",
+      start: new Date(startYear, 6, 6),
+      end: new Date(startYear, 9, 5),
+      deadline: new Date(startYear, 10, 7),
+      period: `6 Jul — 5 Oct ${startYear}`
+    },
+    {
+      label: "Q3",
+      start: new Date(startYear, 9, 6),
+      end: new Date(startYear + 1, 0, 5),
+      deadline: new Date(startYear + 1, 1, 7),
+      period: `6 Oct — 5 Jan ${startYear + 1}`
+    },
+    {
+      label: "Q4",
+      start: new Date(startYear + 1, 0, 6),
+      end: new Date(startYear + 1, 3, 5),
+      deadline: new Date(startYear + 1, 4, 7),
+      period: `6 Jan — 5 Apr ${startYear + 1}`
+    }
+  ];
+};
+
+const mtdQuarters = getMTDQuarters(selectedFinancialYear);
+const todayDate = new Date();
+
+const getQuarterData = (quarter) => {
+  const qTransactions = financialYearTransactions.filter(t => {
+    const d = new Date(t.date);
+    return d >= quarter.start && d <= quarter.end;
+  });
+  const income = qTransactions
+    .filter(t => t.type === "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  const expenses = qTransactions
+    .filter(t => {
+      if (t.type === "income") return false;
+      if (t.hmrcStatus === "personal") return false;
+      if (t.category === "Personal") return false;
+      const allowability = getCategoryAllowability(t.category);
+      return t.hmrcStatus === "overridden" || allowability !== "never";
+    })
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  return { income, expenses, profit: income - expenses };
+};
+
+// Download quarterly summary as CSV
+const downloadQuarterSummary = (quarter) => {
+  const data = getQuarterData(quarter);
+  const rows = [
+    ["MTD Quarterly Summary — Enyi"],
+    [""],
+    ["Quarter", quarter.label],
+    ["Period", quarter.period],
+    ["Deadline", quarter.deadline.toLocaleDateString("en-GB")],
+    ["Financial Year", selectedFinancialYear],
+    [""],
+    ["INCOME"],
+    ["Total income", `£${data.income.toFixed(2)}`],
+    [""],
+    ["EXPENSES (HMRC Allowable)"],
+    ["Total allowable expenses", `£${data.expenses.toFixed(2)}`],
+    [""],
+    ["PROFIT"],
+    ["Taxable profit", `£${data.profit.toFixed(2)}`],
+    [""],
+    ["Generated by Enyi — enyi.ai"],
+    ["This summary is formatted for MTD ITSA compliance."],
+    ["Submit via HMRC-compatible software or give to your accountant."]
+  ];
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", `enyi-mtd-${quarter.label}-${selectedFinancialYear.replace("/", "-")}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+    
 
   const filteredHistoryTransactions = financialYearTransactions
     .slice()
@@ -735,7 +910,6 @@ const personalCategories = new Set(
   const estimatedIncomeTax = calculateIncomeTax(taxableIncome);
   const estimatedClass4NI = calculateClass4NI(estimatedProfit);
   const estimatedTotalTax = estimatedIncomeTax + estimatedClass4NI;
-  const takeHome = combinedIncome - estimatedTotalTax;
   const monthlyTaxPot = estimatedTotalTax / 12;
 
   // --- CATEGORY ANALYSIS ---
@@ -951,7 +1125,9 @@ const remaining = goalProfit - taxableProfit;
     setExpandedMonths((prev) => ({ ...prev, [monthKey]: !prev[monthKey] }));
   };
 
-  const addOtherIncomeSource = () => {
+  // eslint-disable-next-line no-unused-vars
+const addOtherIncomeSource = () => {
+
     const parsedAmount = parseFloat(otherIncomeAmount);
     if (!parsedAmount || parsedAmount <= 0) return;
     setOtherIncomeSources((prev) => {
@@ -968,7 +1144,9 @@ const remaining = goalProfit - taxableProfit;
     setOtherIncomeAmount("");
   };
 
-  const deleteOtherIncomeSource = (id) => {
+  // eslint-disable-next-line no-unused-vars  
+const deleteOtherIncomeSource = (id) => {
+
     setOtherIncomeSources((prev) => prev.filter((item) => item.id !== id));
   };
 
@@ -1078,15 +1256,14 @@ const remaining = goalProfit - taxableProfit;
               <FiMenu size={24} />
             </button>
             {menuOpen && (
-              <div className="nav-dropdown">
-                <button onClick={() => scrollToSection("add-transaction")}>Add Transaction</button>
-                <button onClick={() => scrollToSection("receipts")}>Receipts</button>
-                <button onClick={() => scrollToSection("financial-overview")}>Financial Overview</button>
-                <button onClick={() => scrollToSection("spending-categories")}>Spending Categories</button>
-                <button onClick={() => scrollToSection("tax-estimate")}>Tax Estimate</button>
-                <button onClick={() => scrollToSection("enyi-ai")}>Enyi AI</button>
-                <button onClick={() => scrollToSection("transaction-history")}>Transaction History</button>
-                <div className="nav-divider" />
+  <div className="nav-dropdown">
+  <button onClick={() => scrollToSection("add-transaction")}>Add Transaction</button>
+  <button onClick={() => scrollToSection("receipts")}>Receipts</button>
+  <button onClick={() => scrollToSection("your-numbers")}>Your Numbers</button>
+  <button onClick={() => scrollToSection("spending-categories")}>Spending Categories</button>
+  <button onClick={() => scrollToSection("enyi-ai")}>Enyi AI</button>
+  <button onClick={() => scrollToSection("transaction-history")}>Transaction History</button>
+  <div className="nav-divider" />
 <button onClick={() => { setShowSettings(true); setMenuOpen(false); }}>
   ⚙️ Settings
 </button>
@@ -1379,84 +1556,438 @@ const remaining = goalProfit - taxableProfit;
 
 
         <section className="two-column-grid">
-          <div id="financial-overview" className="fin-card">
-            <div className="summary-top">
-              <div>
-                <h2>Financial Overview</h2>
-                <p className="section-subtitle">A live snapshot of your business finances</p>
-                <div className="financial-year-row">
-                  <label className="financial-year-label">Financial year</label>
-                  <select value={selectedFinancialYear} onChange={(e) => setSelectedFinancialYear(e.target.value)} className="financial-year-select">
-                    <option value="2023/24">2023/24</option>
-                    <option value="2024/25">2024/25</option>
-                    <option value="2025/26">2025/26</option>
-                    <option value="2026/27">2026/27</option>
-                  </select>
-                </div>
-              </div>
-              <div className="brand-chip">Live</div>
-            </div>
- <div className="stat-grid">
-  <div className="stat-card">
-    <span className="stat-label">Income</span>
-    <span className="stat-value">{formatCurrency(totalIncome)}</span>
-  </div>
+  <section id="your-numbers" className="fin-card your-numbers-card">
 
-  <div className="stat-card">
-    <span className="stat-label">Total expenses</span>
-    <span className="stat-value">{formatCurrency(totalExpenses)}</span>
-  </div>
-
-  <div className="stat-card stat-card-profit">
-    <span className="stat-label">Profit</span>
-    <span className="stat-value">{formatCurrency(profit)}</span>
-  </div>
-
-  <div className="stat-card">
-    <span className="stat-label">Transactions</span>
-    <span className="stat-value">{financialYearTransactions.length}</span>
-  </div>
-
-  <div className="stat-card">
-    <span className="stat-label">HMRC allowable expenses</span>
-    <span className="stat-value stat-value-green">{formatCurrency(allowableExpenses)}</span>
-  </div>
-
-  {nonAllowableExpenses > 0 && (
-    <div className="stat-card">
-      <span className="stat-label">Not tax-deductible</span>
-      <span className="stat-value stat-value-red">{formatCurrency(nonAllowableExpenses)}</span>
+  {/* Header */}
+  <div className="summary-top">
+    <div>
+      <h2>Your Numbers</h2>
+      <p className="section-subtitle">
+        Your complete financial picture for {selectedFinancialYear}
+      </p>
+      <div className="financial-year-row">
+        <label className="financial-year-label">Financial year</label>
+        <select
+          value={selectedFinancialYear}
+          onChange={(e) => {
+            setSelectedFinancialYear(e.target.value);
+            setGoalLoaded(false);
+          }}
+          className="financial-year-select"
+        >
+          <option value="2023/24">2023/24</option>
+          <option value="2024/25">2024/25</option>
+          <option value="2025/26">2025/26</option>
+          <option value="2026/27">2026/27</option>
+        </select>
+      </div>
     </div>
-  )}
-
-  <div className="stat-card">
-    <span className="stat-label">Monthly income</span>
-    <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
+    <div className="brand-chip">Live</div>
   </div>
 
-  <div className="stat-card">
-    <span className="stat-label">Monthly expenses</span>
-    <span className="stat-value">{formatCurrency(monthlyExpenses)}</span>
-  </div>
-</div>
+  {/* ── DRAWER 1 — YOUR BUSINESS ── */}
+  <div className="yn-drawer">
+    <button
+      className="yn-drawer-header"
+      onClick={() => toggleDrawer("business")}
+      type="button"
+    >
+      <div className="yn-drawer-left">
+        <div className="yn-drawer-icon" style={{ background: "linear-gradient(135deg, #09111f, #162238)" }}>💼</div>
+        <div>
+          <div className="yn-drawer-title">Your Business</div>
+          <div className="yn-drawer-sub">Income, expenses and profit</div>
+        </div>
+      </div>
+      <div className="yn-drawer-right">
+        <span className="yn-drawer-value">{formatCurrency(taxableProfit)}</span>
+        <span className={`yn-chevron ${expandedDrawers.business ? "open" : ""}`}>▾</span>
+      </div>
+    </button>
 
-            <div className="button-group top-space">
-              <select className="fin-input" value={csvRange} onChange={(e) => setCsvRange(e.target.value)}>
-                <option value="all">All records</option>
-                <option value="3months">Last 3 months</option>
-                <option value="6months">Last 6 months</option>
-                <option value="custom">Custom range</option>
-              </select>
-              {csvRange === "custom" && (
-                <>
-                  <input type="date" className="fin-input" value={csvStartDate} onChange={(e) => setCsvStartDate(e.target.value)} />
-                  <input type="date" className="fin-input" value={csvEndDate} onChange={(e) => setCsvEndDate(e.target.value)} />
-                </>
-              )}
-              <button onClick={downloadCSV} className="primary-button">Download CSV</button>
-              <button onClick={clearAllTransactions} className="secondary-button">Clear All Data</button>
+    {expandedDrawers.business && (
+      <div className="yn-drawer-body">
+
+        {/* Stats */}
+        <div className="yn-stat-grid">
+          <div className="yn-stat">
+            <span className="yn-stat-label">This year's income</span>
+            <span className="yn-stat-value">{formatCurrency(totalIncome)}</span>
+          </div>
+          <div className="yn-stat">
+            <span className="yn-stat-label">Business expenses</span>
+            <span className="yn-stat-value">{formatCurrency(allowableExpenses)}</span>
+          </div>
+          <div className="yn-stat yn-stat-highlight">
+            <span className="yn-stat-label">Business profit</span>
+            <span className="yn-stat-value">{formatCurrency(taxableProfit)}</span>
+          </div>
+          <div className="yn-stat">
+            <span className="yn-stat-label">Profit margin</span>
+            <span className="yn-stat-value">{profitMargin}%</span>
+            <div className="yn-margin-track">
+              <div
+                className="yn-margin-fill"
+                style={{
+                  width: `${Math.min(profitMargin, 100)}%`,
+                  background: profitMargin >= 50
+                    ? "#10b981"
+                    : profitMargin >= 30
+                    ? "#f59e0b"
+                    : "#ef4444"
+                }}
+              />
             </div>
           </div>
+        </div>
+
+        <div className="yn-divider" />
+
+        {/* Downloads */}
+        <div className="yn-downloads">
+          <p className="yn-downloads-label">Downloads</p>
+
+          {/* CSV Range */}
+          <div className="yn-csv-range">
+            <select
+              className="fin-input yn-csv-select"
+              value={csvRange}
+              onChange={(e) => setCsvRange(e.target.value)}
+            >
+              <option value="all">All records</option>
+              <option value="3months">Last 3 months</option>
+              <option value="6months">Last 6 months</option>
+              <option value="custom">Custom range</option>
+            </select>
+            {csvRange === "custom" && (
+              <div className="yn-csv-dates">
+                <input
+                  type="date"
+                  className="fin-input"
+                  value={csvStartDate}
+                  onChange={(e) => setCsvStartDate(e.target.value)}
+                />
+                <input
+                  type="date"
+                  className="fin-input"
+                  value={csvEndDate}
+                  onChange={(e) => setCsvEndDate(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Download CSV button */}
+          <button className="yn-download-btn" onClick={downloadCSV} type="button">
+            <div className="yn-download-left">
+              <span className="yn-download-icon">📊</span>
+              <div>
+                <div className="yn-download-title">Download CSV</div>
+                <div className="yn-download-sub">
+                  Raw transaction data for your accountant
+                </div>
+              </div>
+            </div>
+            <span className="yn-download-arrow">↓</span>
+          </button>
+
+          {/* MTD Quarterly */}
+          <p className="yn-mtd-label">MTD Quarterly Summaries</p>
+          {mtdQuarters.map((quarter) => {
+            const isComplete = todayDate > quarter.end;
+            const isActive = todayDate >= quarter.start && todayDate <= quarter.end;
+            const data = getQuarterData(quarter);
+            const daysToDeadline = Math.max(0, Math.floor(
+              (quarter.deadline - todayDate) / (1000 * 60 * 60 * 24)
+            ));
+
+            return (
+              <div
+                key={quarter.label}
+                className={`yn-quarter-row ${!isComplete ? "yn-quarter-locked" : ""}`}
+              >
+                <div className="yn-quarter-left">
+                  <div className={`yn-quarter-status ${
+                    isComplete
+                      ? "yn-status-complete"
+                      : isActive
+                      ? "yn-status-active"
+                      : "yn-status-pending"
+                  }`}>
+                    {isComplete ? "✓" : isActive ? "●" : "○"}
+                  </div>
+                  <div>
+                    <div className="yn-quarter-title">
+                      {quarter.label} — {quarter.period}
+                    </div>
+                    <div className="yn-quarter-sub">
+                      {isComplete
+                        ? `Income ${formatCurrency(data.income)} • Profit ${formatCurrency(data.profit)}`
+                        : isActive
+                        ? `In progress • Deadline in ${daysToDeadline} days`
+                        : `Starts ${quarter.start.toLocaleDateString("en-GB")}`
+                      }
+                    </div>
+                  </div>
+                </div>
+                {isComplete ? (
+                  <button
+                    className="yn-quarter-download"
+                    onClick={() => downloadQuarterSummary(quarter)}
+                    type="button"
+                  >
+                    Download
+                  </button>
+                ) : (
+                  <span className="yn-quarter-locked-label">
+                    {isActive ? "Not yet due" : "Upcoming"}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+
+          <p className="yn-mtd-note">
+            MTD quarterly summaries are formatted for HMRC compliance.
+            Direct submission to HMRC coming in a future update.
+          </p>
+        </div>
+      </div>
+    )}
+  </div>
+
+  {/* ── DRAWER 2 — TAX POSITION ── */}
+  <div className="yn-drawer">
+    <button
+      className="yn-drawer-header"
+      onClick={() => toggleDrawer("tax")}
+      type="button"
+    >
+      <div className="yn-drawer-left">
+        <div className="yn-drawer-icon" style={{ background: "linear-gradient(135deg, #0d9488, #2fe1c2)" }}>📊</div>
+        <div>
+          <div className="yn-drawer-title">Tax Position</div>
+          <div className="yn-drawer-sub">Auto-calculated from your transactions</div>
+        </div>
+      </div>
+      <div className="yn-drawer-right">
+        <span className="yn-drawer-value" style={{ color: "#b91c1c" }}>
+          {formatCurrency(estimatedTotalTax)}
+        </span>
+        <span className={`yn-chevron ${expandedDrawers.tax ? "open" : ""}`}>▾</span>
+      </div>
+    </button>
+
+    {expandedDrawers.tax && (
+      <div className="yn-drawer-body">
+        <div className="yn-tax-calculation">
+
+          <div className="yn-tax-row">
+            <span>Taxable profit</span>
+            <span>{formatCurrency(estimatedProfit)}</span>
+          </div>
+          <div className="yn-tax-row yn-tax-deduction">
+            <span>Personal allowance</span>
+            <span>− {formatCurrency(personalAllowance)}</span>
+          </div>
+          <div className="yn-tax-divider" />
+          <div className="yn-tax-row yn-tax-subtotal">
+            <span>Taxable income</span>
+            <span>{formatCurrency(taxableIncome)}</span>
+          </div>
+
+          <div className="yn-tax-spacer" />
+
+          <div className="yn-tax-row">
+            <span>Income Tax</span>
+            <span>{formatCurrency(estimatedIncomeTax)}</span>
+          </div>
+          <div className="yn-tax-row">
+            <span>Class 4 National Insurance</span>
+            <span>{formatCurrency(estimatedClass4NI)}</span>
+          </div>
+          <div className="yn-tax-divider" />
+          <div className="yn-tax-row yn-tax-total">
+            <span>Estimated tax bill</span>
+            <span>{formatCurrency(estimatedTotalTax)}</span>
+          </div>
+
+          <div className="yn-tax-spacer" />
+
+          <div className="yn-tax-pot-block">
+            <div className="yn-tax-pot-left">
+              <span className="yn-tax-pot-icon">💰</span>
+              <div>
+                <div className="yn-tax-pot-label">Set aside this month</div>
+                <div className="yn-tax-pot-sub">To cover your annual tax bill</div>
+              </div>
+            </div>
+            <span className="yn-tax-pot-amount">{formatCurrency(monthlyTaxPot)}</span>
+          </div>
+
+          {nonAllowableExpenses > 0 && (
+            <div className="yn-tax-note-block">
+              <p>
+                {formatCurrency(nonAllowableExpenses)} of personal and
+                non-allowable expenses are excluded from this calculation.
+              </p>
+            </div>
+          )}
+
+          {otherIncomeSources.length > 0 && (
+            <div className="yn-other-income">
+              <p className="yn-other-income-label">Other taxable income included</p>
+              {otherIncomeSources.map(item => (
+                <div key={item.id} className="yn-other-income-row">
+                  <span>{formatIncomeTypeLabel(item.type)}</span>
+                  <span>{formatCurrency(item.amount)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </div>
+
+        <p className="yn-tax-disclaimer">
+          Estimate only. Final tax may differ based on reliefs, allowances
+          and HMRC rules.
+          <span
+            className="yn-settings-link"
+            onClick={() => setShowSettings(true)}
+          >
+            {" "}Add other income in Settings →
+          </span>
+        </p>
+      </div>
+    )}
+  </div>
+
+  {/* ── DRAWER 3 — MONTHLY SNAPSHOT ── */}
+  <div className="yn-drawer">
+    <button
+      className="yn-drawer-header"
+      onClick={() => toggleDrawer("monthly")}
+      type="button"
+    >
+      <div className="yn-drawer-left">
+        <div className="yn-drawer-icon" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>📅</div>
+        <div>
+          <div className="yn-drawer-title">Monthly Snapshot</div>
+          <div className="yn-drawer-sub">Compare month by month</div>
+        </div>
+      </div>
+      <div className="yn-drawer-right">
+        <span className="yn-drawer-value">{formatCurrency(snapshotProfit)}</span>
+        <span className={`yn-chevron ${expandedDrawers.monthly ? "open" : ""}`}>▾</span>
+      </div>
+    </button>
+
+    {expandedDrawers.monthly && (
+      <div className="yn-drawer-body">
+
+        {/* Month navigator */}
+        <div className="yn-month-nav">
+          <button
+            className="yn-month-arrow"
+            onClick={() => {
+              const prev = new Date(snapshotMonth);
+              prev.setMonth(prev.getMonth() - 1);
+              setSnapshotMonth(prev);
+            }}
+            type="button"
+          >
+            ←
+          </button>
+          <span className="yn-month-label">
+            {snapshotMonth.toLocaleString("en-GB", {
+              month: "long",
+              year: "numeric"
+            })}
+          </span>
+          <button
+            className="yn-month-arrow"
+            onClick={() => {
+              const next = new Date(snapshotMonth);
+              next.setMonth(next.getMonth() + 1);
+              setSnapshotMonth(next);
+            }}
+            type="button"
+            disabled={
+              snapshotMonth.getMonth() === new Date().getMonth() &&
+              snapshotMonth.getFullYear() === new Date().getFullYear()
+            }
+          >
+            →
+          </button>
+        </div>
+
+        {/* Comparison table */}
+        <div className="yn-snapshot-table">
+          <div className="yn-snapshot-header">
+            <span />
+            <span className="yn-snapshot-col-current">
+              {snapshotMonth.toLocaleString("en-GB", { month: "short", year: "numeric" })}
+            </span>
+            <span className="yn-snapshot-col-prev">
+              {prevSnapshotMonth.toLocaleString("en-GB", { month: "short", year: "numeric" })}
+            </span>
+            <span>Change</span>
+          </div>
+
+          {[
+            {
+              label: "Income",
+              current: snapshotIncome,
+              prev: prevSnapshotIncome,
+              change: incomeChangeSnapshot,
+              positive: true
+            },
+            {
+              label: "Expenses",
+              current: snapshotExpenses,
+              prev: prevSnapshotExpenses,
+              change: expenseChangeSnapshot,
+              positive: false
+            },
+            {
+              label: "Profit",
+              current: snapshotProfit,
+              prev: prevSnapshotProfit,
+              change: profitChangeSnapshot,
+              positive: true
+            }
+          ].map(row => (
+            <div key={row.label} className="yn-snapshot-row">
+              <span className="yn-snapshot-row-label">{row.label}</span>
+              <span className="yn-snapshot-col-current">
+                {formatCurrency(row.current)}
+              </span>
+              <span className="yn-snapshot-col-prev yn-snapshot-prev">
+                {formatCurrency(row.prev)}
+              </span>
+              <span className={`yn-snapshot-change ${
+                row.change === null ? "" :
+                (row.positive ? row.change >= 0 : row.change <= 0)
+                  ? "yn-change-good"
+                  : "yn-change-bad"
+              }`}>
+                {row.change === null
+                  ? "—"
+                  : `${row.change >= 0 ? "↑" : "↓"} ${Math.abs(row.change)}%`
+                }
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <p className="yn-snapshot-note">
+          Expenses shown are HMRC allowable business expenses only.
+        </p>
+      </div>
+    )}
+  </div>
+
+</section>
 
   <div id="spending-categories" className="fin-card">
   <div className="section-head">
@@ -1635,92 +2166,6 @@ const remaining = goalProfit - taxableProfit;
 
         </section>
 
-        <section id="tax-estimate" className="fin-card">
-          <div className="summary-top">
-            <div>
-              <h2>Tax Estimate</h2>
-              <p className="section-subtitle">UK sole trader estimate • {region} • Viewing {selectedFinancialYear}</p>
-            </div>
-            <div className="brand-chip">Estimate</div>
-          </div>
-          <div className="tax-input-block top-space">
-            <div className="tax-label-row">
-              <label className="tax-input-label">Other taxable income outside this business</label>
-              <span className="info-icon">
-                ⓘ
-                <span className="tooltip">Include income not recorded in this business, such as salary, rental income, dividends or interest.</span>
-              </span>
-            </div>
-            <div className="tax-income-row">
-              <select value={otherIncomeType} onChange={(e) => setOtherIncomeType(e.target.value)} className="tax-income-select">
-                <option value="salary">Salary</option>
-                <option value="rental">Rental income</option>
-                <option value="dividends">Dividends</option>
-                <option value="interest">Interest</option>
-                <option value="other">Other</option>
-              </select>
-              <input type="number" min="0" step="0.01" value={otherIncomeAmount}
-                onChange={(e) => setOtherIncomeAmount(e.target.value)}
-                className="fin-input tax-income-amount" placeholder="Enter amount" />
-              <button type="button" onClick={addOtherIncomeSource} className="secondary-button tax-add-income-button">Add</button>
-            </div>
-            {otherIncomeSources.length > 0 && (
-              <div className="other-income-list">
-                {otherIncomeSources.map((item) => (
-                  <div key={item.id} className="other-income-item">
-                    <div className="other-income-left">
-                      <span className="other-income-type">{formatIncomeTypeLabel(item.type)}</span>
-                      <span className="other-income-value">{formatCurrency(item.amount)}</span>
-                    </div>
-                    <button type="button" onClick={() => deleteOtherIncomeSource(item.id)} className="other-income-remove">Remove</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="stat-grid top-space">
-            <div className="stat-card">
-              <span className="stat-label">Taxable profit (HMRC allowable expenses only)</span>
-              <span className="stat-value">{formatCurrency(estimatedProfit)}</span>
-              {nonAllowableExpenses > 0 && (
-                <span style={{ fontSize: "12px", color: "#6b7280", marginTop: "6px", display: "block" }}>
-                  {formatCurrency(nonAllowableExpenses)} of non-allowable expenses excluded
-                </span>
-              )}
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Personal allowance</span>
-              <span className="stat-value">{formatCurrency(personalAllowance)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Taxable income</span>
-              <span className="stat-value">{formatCurrency(taxableIncome)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Estimated Income Tax</span>
-              <span className="stat-value">{formatCurrency(estimatedIncomeTax)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Estimated Class 4 NI</span>
-              <span className="stat-value">{formatCurrency(estimatedClass4NI)}</span>
-            </div>
-            <div className="stat-card highlight-card">
-              <span className="stat-label">Estimated total tax</span>
-              <span className="stat-value">{formatCurrency(estimatedTotalTax)}</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Take-home (after tax)</span>
-              <span className="stat-value">{formatCurrency(takeHome)}</span>
-            </div>
-            <div className="stat-card highlight-card">
-              <span className="stat-label">Monthly tax pot</span>
-              <span className="stat-value">{formatCurrency(monthlyTaxPot)}</span>
-            </div>
-          </div>
-          <p className="tax-note bottom-note">
-            Estimate only. Final tax may differ based on other income, reliefs, allowances and HMRC rules.
-          </p>
-        </section>
 
         <div id="enyi-ai" className="fin-card"></div>
         <AIChatPanel selectedFinancialYear={selectedFinancialYear} transactions={transactions} />
@@ -1938,12 +2383,14 @@ const remaining = goalProfit - taxableProfit;
 
 {/* SETTINGS MODAL */}
 {showSettings && (
-  <SettingsModal
-    currentGoal={goalProfit}
-    financialYear={selectedFinancialYear}
-    onSave={handleSaveGoal}
-    onClose={() => setShowSettings(false)}
-  />
+ <SettingsModal
+  currentGoal={goalProfit}
+  financialYear={selectedFinancialYear}
+  onSave={handleSaveGoal}
+  onClose={() => setShowSettings(false)}
+  onClearData={clearAllTransactions}
+/>
+
 )}
 
       </div>

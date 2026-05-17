@@ -183,3 +183,22 @@
     padding: 0;
   }
 }
+
+.settings-danger-btn {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  background: #fff5f5;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.settings-danger-btn:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
