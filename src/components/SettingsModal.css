@@ -20,6 +20,9 @@
   border-radius: 24px;
   width: 100%;
   max-width: 460px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow:
     0 24px 60px rgba(9, 17, 31, 0.18),
     0 4px 14px rgba(9, 17, 31, 0.08);
@@ -27,13 +30,20 @@
   animation: slideUp 0.2s ease;
 }
 
-/* Header */
+/* Header — stays fixed at top */
 .settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 22px 24px 18px;
   border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+/* Scrollable body */
+.settings-modal-body {
+  overflow-y: auto;
+  flex: 1;
 }
 
 .settings-title {
@@ -172,18 +182,7 @@
   line-height: 1.6;
 }
 
-@media (max-width: 768px) {
-  .settings-modal {
-    max-width: 100%;
-    border-radius: 20px 20px 0 0;
-  }
-
-  .settings-overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
-}
-
+/* Danger button */
 .settings-danger-btn {
   width: 100%;
   padding: 13px;
@@ -201,4 +200,137 @@
 .settings-danger-btn:hover {
   background: #fee2e2;
   border-color: #ef4444;
+}
+
+/* ── REGION SELECTOR ── */
+.settings-region-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.settings-region-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1.5px solid #e8edf5;
+  border-radius: 16px;
+  background: #f8fafc;
+  cursor: pointer;
+  font-family: Inter, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #09111f;
+  text-align: left;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+}
+
+.settings-region-btn:hover {
+  border-color: #2fe1c2;
+  background: #f0fdf9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(47, 225, 194, 0.12);
+}
+
+.settings-region-btn-active {
+  border-color: #2fe1c2 !important;
+  background: linear-gradient(135deg, #f0fdf9 0%, #ffffff 100%) !important;
+  box-shadow: 0 0 0 3px rgba(47, 225, 194, 0.15);
+}
+
+.settings-region-flag {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.settings-region-label {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+  color: #09111f;
+}
+
+.settings-region-check {
+  font-size: 13px;
+  font-weight: 900;
+  color: #0d9488;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── REGION INFO NOTES ── */
+.settings-region-note {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e8edf5;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #334155;
+  margin-bottom: 14px;
+}
+
+.settings-region-note-scotland {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #065f46;
+}
+
+/* ── AI CHAT REGION BADGE ── */
+.ai-region-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
+
+.ai-region-badge-scotland {
+  background: #f0fdf4;
+  color: #065f46;
+  border-color: #bbf7d0;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .settings-modal {
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .settings-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .settings-region-btn {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+
+  .settings-region-flag {
+    font-size: 20px;
+  }
 }

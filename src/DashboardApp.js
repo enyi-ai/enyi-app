@@ -20,6 +20,12 @@ import AIChatPanel from "./components/AIChatPanel";
 import { FiMenu } from "react-icons/fi";
 import HMRCFlagModal from "./components/HMRCFlagModal";
 import { shouldFlag, getCategoryAllowability } from "./hmrcRules";
+import {
+  calculateTaxSummary,
+  getTaxRegionNarrative,
+} from "./taxEngine";
+
+
 import "./components/HMRCFlagModal.css";
 import GoalSetupModal from "./components/GoalSetupModal";
 import SettingsModal from "./components/SettingsModal";
@@ -84,6 +90,9 @@ const [snapshotMonth, setSnapshotMonth] = useState(new Date());
 const [showGoalSetup, setShowGoalSetup] = useState(false);
 const [showSettings, setShowSettings] = useState(false);
 const [goalLoaded, setGoalLoaded] = useState(false);
+const [taxRegion, setTaxRegion] = useState("england_wales");
+const [regionLoaded, setRegionLoaded] = useState(false);
+
 
 
   const [expandedCategories, setExpandedCategories] = useState({
@@ -221,6 +230,24 @@ useEffect(() => {
     if (cameraInputRef.current) cameraInputRef.current.value = "";
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+useEffect(() => {
+  const loadRegion = async () => {
+    if (!currentUser || regionLoaded) return;
+    try {
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data();
+        if (data.taxRegion) setTaxRegion(data.taxRegion);
+      }
+    } catch (error) {
+      console.error("Failed to load tax region:", error);
+    }
+    setRegionLoaded(true);
+  };
+  loadRegion();
+}, [currentUser, regionLoaded]);
+
 
   useEffect(() => {
     if (!currentUser) return;
@@ -287,6 +314,18 @@ const handleSaveGoal = async (amount) => {
     console.error("Failed to save goal:", error);
   }
 };
+
+const handleSaveRegion = async (region) => {
+  if (!currentUser) return;
+  try {
+    const userDocRef = doc(db, "users", currentUser.uid);
+    await updateDoc(userDocRef, { taxRegion: region });
+    setTaxRegion(region);
+  } catch (error) {
+    console.error("Failed to save tax region:", error);
+  }
+};
+
 
 const handleSkipGoal = () => {
   setShowGoalSetup(false);
@@ -868,49 +907,21 @@ const personalCategories = new Set(
 
   // ── TAX USES TAXABLE PROFIT (allowable expenses only) ──
   const estimatedProfit = Math.max(taxableProfit, 0);
-  const totalTaxableSources = Math.max(estimatedProfit + otherAnnualIncome, 0);
+ 
 
-  const calculatePersonalAllowance = (income) => {
-    const baseAllowance = 12570;
-    if (income <= 100000) return baseAllowance;
-    const reduction = (income - 100000) / 2;
-    return Math.max(baseAllowance - reduction, 0);
-  };
+const {
+  personalAllowance,
+  taxableIncome,
+  estimatedIncomeTax,
+  estimatedClass4NI,
+  estimatedTotalTax,
+  monthlyTaxPot,
+} = calculateTaxSummary(
+  Math.max(taxableProfit, 0),
+  otherAnnualIncome,
+  taxRegion
+);
 
-  const personalAllowance = calculatePersonalAllowance(totalTaxableSources);
-  const taxableIncome = Math.max(totalTaxableSources - personalAllowance, 0);
-
-  const calculateIncomeTax = (taxable) => {
-    let remaining = taxable;
-    let tax = 0;
-    const basicBand = 37700;
-    const higherBandTaxableLimit = 125140 - 12570;
-    const basicSlice = Math.min(remaining, basicBand);
-    tax += basicSlice * 0.2;
-    remaining -= basicSlice;
-    if (remaining > 0) {
-      const higherSlice = Math.min(remaining, higherBandTaxableLimit - basicBand);
-      tax += higherSlice * 0.4;
-      remaining -= higherSlice;
-    }
-    if (remaining > 0) tax += remaining * 0.45;
-    return tax;
-  };
-
-  const calculateClass4NI = (profits) => {
-    if (profits <= 12570) return 0;
-    let ni = 0;
-    const mainBandUpper = 50270;
-    const mainSlice = Math.min(profits, mainBandUpper) - 12570;
-    if (mainSlice > 0) ni += mainSlice * 0.06;
-    if (profits > mainBandUpper) ni += (profits - mainBandUpper) * 0.02;
-    return ni;
-  };
-
-  const estimatedIncomeTax = calculateIncomeTax(taxableIncome);
-  const estimatedClass4NI = calculateClass4NI(estimatedProfit);
-  const estimatedTotalTax = estimatedIncomeTax + estimatedClass4NI;
-  const monthlyTaxPot = estimatedTotalTax / 12;
 
   // --- CATEGORY ANALYSIS ---
   const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
@@ -1052,10 +1063,11 @@ const remaining = goalProfit - taxableProfit;
   }
 
   if (estimatedTotalTax > 0) {
-    narrativeParts.push(
-      `💰 Action: Set aside ${formatCurrency(monthlyTaxPot)} this month for your tax pot. Your estimated total tax liability is ${formatCurrency(estimatedTotalTax)}.`
-    );
-  }
+  narrativeParts.push(
+    getTaxRegionNarrative(taxRegion, estimatedTotalTax, monthlyTaxPot, taxableIncome)
+  );
+}
+
 
   const financialNarrative = narrativeParts.join("\n\n");
 
@@ -2168,7 +2180,12 @@ const deleteOtherIncomeSource = (id) => {
 
 
         <div id="enyi-ai" className="fin-card"></div>
-        <AIChatPanel selectedFinancialYear={selectedFinancialYear} transactions={transactions} />
+<AIChatPanel
+  selectedFinancialYear={selectedFinancialYear}
+  transactions={transactions}
+  taxRegion={taxRegion}
+/>
+
 
         <section id="transaction-history" className="fin-card">
           <div className="section-head">
@@ -2383,13 +2400,16 @@ const deleteOtherIncomeSource = (id) => {
 
 {/* SETTINGS MODAL */}
 {showSettings && (
- <SettingsModal
+<SettingsModal
   currentGoal={goalProfit}
   financialYear={selectedFinancialYear}
   onSave={handleSaveGoal}
   onClose={() => setShowSettings(false)}
   onClearData={clearAllTransactions}
+  currentRegion={taxRegion}
+  onSaveRegion={handleSaveRegion}
 />
+
 
 )}
 
