@@ -5,8 +5,8 @@
 .hmrc-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(9, 17, 31, 0.48);
-  backdrop-filter: blur(4px);
+  background: rgba(9, 17, 31, 0.52);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20,29 +20,380 @@
   to { opacity: 1; }
 }
 
+@keyframes slideModal {
+  from { opacity: 0; transform: translateY(-14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── BASE MODAL ── */
 .hmrc-modal {
   background: #ffffff;
-  border-radius: 22px;
-  padding: 0;
+  border-radius: 24px;
   width: 100%;
   max-width: 460px;
-  box-shadow:
-    0 20px 56px rgba(9, 17, 31, 0.18),
-    0 4px 14px rgba(9, 17, 31, 0.08);
+  box-shadow: 0 24px 60px rgba(9,17,31,0.20), 0 4px 16px rgba(9,17,31,0.08);
   overflow: hidden;
-  animation: slideModal 0.2s ease;
+  animation: slideModal 0.22s ease;
 }
 
-@keyframes slideModal {
-  from { opacity: 0; transform: translateY(-12px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ── REVIEW MODAL (new simplified version) ── */
+.review-modal {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(9,17,31,0.20), 0 4px 16px rgba(9,17,31,0.08);
+  animation: slideModal 0.22s ease;
 }
 
-/* ── HEADER ── */
+/* ── REVIEW MODAL HEADER ── */
+.review-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 22px 22px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+}
+
+.review-modal-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.review-modal-title {
+  font-size: 17px;
+  font-weight: 900;
+  color: #09111f;
+  letter-spacing: -0.03em;
+  flex: 1;
+  text-transform: capitalize;
+  margin: 0 32px 0 0;
+}
+
+.review-modal-meta {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.review-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: none;
+  background: #f1f5f9;
+  color: #6b7280;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.review-modal-close:hover {
+  background: #e2e8f0;
+  color: #09111f;
+}
+
+/* ── CONTEXT NOTE ── */
+.review-modal-note {
+  margin: 14px 22px 0;
+  padding: 12px 15px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #78350f;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  font-weight: 500;
+}
+
+.review-modal-note-green {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #065f46;
+}
+
+.review-modal-note-red {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+/* ── OPTIONS LIST ── */
+.review-modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 22px 22px;
+  overflow-y: auto;
+}
+
+.review-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid #e8edf5;
+  background: #f8fafc;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.18s ease;
+}
+
+.review-option:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(9,17,31,0.08);
+}
+
+.review-option-business {
+  border-color: rgba(16,185,129,0.25);
+}
+.review-option-business:hover {
+  background: #f0fdf4;
+  border-color: #10b981;
+}
+
+.review-option-personal {
+  border-color: rgba(100,116,139,0.2);
+}
+.review-option-personal:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.review-option-recategorise {
+  border-color: rgba(99,102,241,0.2);
+}
+.review-option-recategorise:hover {
+  background: #eef2ff;
+  border-color: #6366f1;
+}
+
+.review-option-unclaimed {
+  border-color: rgba(245,158,11,0.25);
+}
+.review-option-unclaimed:hover {
+  background: #fffbeb;
+  border-color: #f59e0b;
+}
+
+.review-option-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.04);
+}
+
+.review-option-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: #09111f;
+  margin-bottom: 3px;
+  letter-spacing: -0.2px;
+}
+
+.review-option-sub {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ── DISMISS ── */
+.review-modal-dismiss {
+  border: none;
+  background: none;
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0 2px;
+  font-family: inherit;
+  text-align: center;
+  width: 100%;
+  transition: color 0.15s ease;
+}
+
+.review-modal-dismiss:hover { color: #6b7280; }
+
+/* ── RECATEGORISE ── */
+.review-recategorise {
+  padding: 14px 22px 22px;
+}
+
+.review-recategorise-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #09111f;
+  margin-bottom: 10px;
+}
+
+/* ── SLICE BREAKDOWN POPUP ── */
+.slice-popup {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(9,17,31,0.20);
+  animation: slideModal 0.22s ease;
+}
+
+.slice-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 22px 22px 18px;
+  border-left: 4px solid #10b981;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+}
+
+.slice-popup-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #09111f;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.slice-popup-total {
+  font-size: 26px;
+  font-weight: 900;
+  color: #09111f;
+  letter-spacing: -0.04em;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.slice-popup-pct {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0;
+}
+
+.slice-popup-body {
+  padding: 18px 22px 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.slice-popup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slice-popup-row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 110px;
+}
+
+.slice-popup-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.slice-popup-cat {
+  font-size: 13px;
+  font-weight: 700;
+  color: #09111f;
+}
+
+.slice-popup-row-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.slice-popup-amt {
+  font-size: 13px;
+  font-weight: 800;
+  color: #09111f;
+  white-space: nowrap;
+  min-width: 70px;
+  text-align: right;
+}
+
+.slice-popup-bar-track {
+  width: 90px;
+  height: 6px;
+  background: #eef2f7;
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.slice-popup-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  opacity: 0.75;
+  transition: width 0.4s ease;
+}
+
+.slice-popup-note {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.6;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  margin-top: 4px;
+}
+
+.slice-popup-empty {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+  padding: 20px 0;
+  margin: 0;
+}
+
+/* ── OLD MODAL STYLES (kept for compatibility) ── */
 .hmrc-modal-header {
   padding: 22px 22px 18px;
   border-left: 4px solid #ef4444;
   border-bottom: 1px solid #f1f5f9;
+  position: relative;
 }
 
 .hmrc-modal-badge {
@@ -68,7 +419,6 @@
   line-height: 1.4;
 }
 
-/* ── HMRC NOTE ── */
 .hmrc-modal-note {
   margin: 0;
   padding: 14px 22px;
@@ -83,7 +433,6 @@
   font-weight: 500;
 }
 
-/* ── ACTION BUTTONS ── */
 .hmrc-modal-actions {
   display: flex;
   flex-direction: column;
@@ -110,21 +459,12 @@
 }
 
 .hmrc-action-button:last-child { border-bottom: none; }
-
-.hmrc-action-button span {
-  font-size: 12px;
-  font-weight: 500;
-  color: #6b7280;
-}
-
+.hmrc-action-button span { font-size: 12px; font-weight: 500; color: #6b7280; }
 .hmrc-action-button:hover { background: #f8fafc; }
-
 .hmrc-action-allowable { color: #065f46; }
 .hmrc-action-recategorise { color: #1d4ed8; }
 .hmrc-action-personal { color: #047857; }
-.hmrc-action-override { color: #b45309; }
 
-/* ── OVERRIDE BLOCK ── */
 .hmrc-override-block {
   padding: 18px 22px;
   display: flex;
@@ -156,27 +496,15 @@
 
 .hmrc-override-textarea:focus {
   border-color: #2fe1c2;
-  box-shadow: 0 0 0 3px rgba(47, 225, 194, 0.12);
+  box-shadow: 0 0 0 3px rgba(47,225,194,0.12);
 }
 
-.hmrc-override-buttons {
-  display: flex;
-  gap: 8px;
-}
-
+.hmrc-override-buttons { display: flex; gap: 8px; }
 .hmrc-override-buttons .primary-button,
-.hmrc-override-buttons .secondary-button {
-  flex: 1;
-}
+.hmrc-override-buttons .secondary-button { flex: 1; }
 
-.hmrc-error {
-  margin: 0;
-  font-size: 12px;
-  color: #b91c1c;
-  font-weight: 600;
-}
+.hmrc-error { margin: 0; font-size: 12px; color: #b91c1c; font-weight: 600; }
 
-/* ── QUICK INTRO ── */
 .hmrc-quick-intro {
   font-size: 13px;
   line-height: 1.6;
@@ -188,7 +516,6 @@
   border-left: 3px solid #2fe1c2;
 }
 
-/* ── DISMISS ── */
 .hmrc-dismiss {
   width: 100%;
   border: none;
@@ -203,12 +530,8 @@
   font-family: inherit;
 }
 
-.hmrc-dismiss:hover {
-  background: #eef2f7;
-  color: #09111f;
-}
+.hmrc-dismiss:hover { background: #eef2f7; color: #09111f; }
 
-/* ── TRANSACTION BADGES ── */
 .hmrc-badge {
   display: inline-flex;
   align-items: center;
@@ -223,38 +546,12 @@
 }
 
 .hmrc-badge:hover { opacity: 0.78; }
+.hmrc-badge-never { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.hmrc-badge-conditional { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+.hmrc-badge-overridden { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.hmrc-badge-personal { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
 
-.hmrc-badge-never {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: 1px solid #fca5a5;
-}
-
-.hmrc-badge-conditional {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fcd34d;
-}
-
-.hmrc-badge-overridden {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
-}
-
-.hmrc-badge-personal {
-  background: #e0e7ff;
-  color: #3730a3;
-  border: 1px solid #a5b4fc;
-}
-
-/* ── QUICK ACTION BUTTONS ── */
-.hmrc-quick-actions {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
+.hmrc-quick-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
 
 .hmrc-quick-btn {
   border: none;
@@ -265,49 +562,108 @@
   cursor: pointer;
   transition: all 0.14s ease;
   font-family: inherit;
-  letter-spacing: 0.01em;
 }
 
-.hmrc-quick-allowable {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
-}
-
-.hmrc-quick-allowable:hover {
-  background: #bbf7d0;
-  transform: translateY(-1px);
-}
-
-.hmrc-quick-personal {
-  background: #e0e7ff;
-  color: #3730a3;
-  border: 1px solid #a5b4fc;
-}
-
-.hmrc-quick-personal:hover {
-  background: #c7d2fe;
-  transform: translateY(-1px);
-}
-
-.hmrc-allowable-confirmed {
-  margin-top: 5px;
-}
+.hmrc-quick-allowable { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.hmrc-quick-allowable:hover { background: #bbf7d0; transform: translateY(-1px); }
+.hmrc-quick-personal { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
+.hmrc-quick-personal:hover { background: #c7d2fe; transform: translateY(-1px); }
+.hmrc-allowable-confirmed { margin-top: 5px; }
 
 /* ── MOBILE ── */
 @media (max-width: 768px) {
-  .hmrc-modal {
-    max-width: 100%;
-    border-radius: 20px 20px 0 0;
-  }
-
   .hmrc-modal-overlay {
     align-items: flex-end;
     padding: 0;
   }
 
-  .hmrc-modal-header { padding: 20px 20px 16px; }
-  .hmrc-modal-note { padding: 13px 20px; }
-  .hmrc-action-button { padding: 13px 20px; }
-  .hmrc-override-block { padding: 16px 20px; }
+  .hmrc-modal,
+  .review-modal,
+  .slice-popup {
+    max-width: 100%;
+    border-radius: 24px 24px 0 0;
+    max-height: 92vh;
+  }
+
+  .review-modal-options { gap: 6px; padding: 12px 18px 20px; }
+  .review-option { padding: 12px 14px; gap: 12px; }
+  .review-option-icon { width: 32px; height: 32px; font-size: 18px; }
+  .review-option-label { font-size: 13px; }
+  .review-option-sub { font-size: 11px; }
+  .review-modal-header { padding: 18px 18px 14px; }
+  .review-modal-note { margin: 12px 18px 0; }
+  .slice-popup-bar-track { width: 60px; }
+  .slice-popup-body { padding: 14px 18px 20px; }
+}
+
+/* ── TRANSACTION HISTORY BADGES ── */
+.tx-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.tx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tx-badge-business {
+  background: #f0fdf4;
+  color: #065f46;
+  border: 1px solid #bbf7d0;
+}
+
+.tx-badge-personal {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.tx-badge-unclaimed {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.tx-status-link {
+  border: none;
+  background: none;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-family: inherit;
+  transition: color 0.15s ease;
+}
+
+.tx-status-link:hover { color: #09111f; }
+
+.tx-review-btn {
+  border: none;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+}
+
+.tx-review-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245,158,11,0.4);
 }

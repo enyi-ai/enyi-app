@@ -47,8 +47,11 @@ function getCurrentFinancialYear() {
 
 function App() {
   const [input, setInput] = useState("");
+  const [slicePopup, setSlicePopup] = useState(null);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState(getCurrentFinancialYear());
   const [expandedMonths, setExpandedMonths] = useState({});
+  const [openMenuId, setOpenMenuId] = useState(null);
+
   // eslint-disable-next-line no-unused-vars
 const [otherIncomeType, setOtherIncomeType] = useState("salary");
 
@@ -237,6 +240,12 @@ useEffect(() => {
   };
   loadRegion();
 }, [currentUser, regionLoaded]);
+
+useEffect(() => {
+  const handleClickOutside = () => setOpenMenuId(null);
+  document.addEventListener("click", handleClickOutside);
+  return () => document.removeEventListener("click", handleClickOutside);
+}, []);
 
 
   useEffect(() => {
@@ -2032,7 +2041,7 @@ const deleteOtherIncomeSource = (id) => {
 
 </section>
 
- <div id="spending-categories" className="fin-card spending-card">
+<div id="spending-categories" className="fin-card spending-card">
 
   {/* HEADER */}
   <div className="spending-header">
@@ -2080,18 +2089,17 @@ const deleteOtherIncomeSource = (id) => {
       getCategoryAllowability(cat) === "always" || overriddenCategories.has(cat)
     );
 
-  const conditionalEntries = allEntries.filter(([cat]) =>
-  getCategoryAllowability(cat) === "conditional" &&
-  !personalCategories.has(cat) &&
-  financialYearTransactions.some(
-    t => t.type !== "income" &&
-         t.category === cat &&
-         t.hmrcStatus !== "overridden" &&
-         t.hmrcStatus !== "personal" &&
-         t.hmrcStatus !== "recategorised"
-  )
-);
-
+    const conditionalEntries = allEntries.filter(([cat]) =>
+      getCategoryAllowability(cat) === "conditional" &&
+      !personalCategories.has(cat) &&
+      financialYearTransactions.some(
+        t => t.type !== "income" &&
+             t.category === cat &&
+             t.hmrcStatus !== "overridden" &&
+             t.hmrcStatus !== "personal" &&
+             t.hmrcStatus !== "recategorised"
+      )
+    );
 
     const neverEntries = allEntries.filter(([cat]) =>
       (getCategoryAllowability(cat) === "never" || personalCategories.has(cat)) &&
@@ -2100,15 +2108,14 @@ const deleteOtherIncomeSource = (id) => {
 
     const businessTotal = allowableEntries.reduce((s, [, a]) => s + a, 0);
     const unclaimedTotal = financialYearTransactions
-  .filter(t =>
-    t.type !== "income" &&
-    getCategoryAllowability(t.category) === "conditional" &&
-    t.hmrcStatus !== "overridden" &&
-    t.hmrcStatus !== "personal" &&
-    t.hmrcStatus !== "recategorised"
-  )
-  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-
+      .filter(t =>
+        t.type !== "income" &&
+        getCategoryAllowability(t.category) === "conditional" &&
+        t.hmrcStatus !== "overridden" &&
+        t.hmrcStatus !== "personal" &&
+        t.hmrcStatus !== "recategorised"
+      )
+      .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
     const personalTotal = neverEntries.reduce((s, [, a]) => s + a, 0);
     const grandTotal = businessTotal + unclaimedTotal + personalTotal;
 
@@ -2130,6 +2137,22 @@ const deleteOtherIncomeSource = (id) => {
           : "personal"
       }));
 
+    // ── SLICE POPUP STATE ──
+
+    const getSliceEntries = (sliceName) => {
+      if (sliceName === "Business") return allowableEntries;
+      if (sliceName === "Personal") return neverEntries;
+      if (sliceName === "Unclaimed") return conditionalEntries;
+      return [];
+    };
+
+    const getSliceColor = (sliceName) => {
+      if (sliceName === "Business") return "#10b981";
+      if (sliceName === "Personal") return "#ef4444";
+      return "#f59e0b";
+    };
+
+    // ── DONUT CHART ──
     const DonutChart = () => {
       const size = 200;
       const cx = size / 2;
@@ -2161,44 +2184,38 @@ const deleteOtherIncomeSource = (id) => {
       });
 
       return (
-        <svg width={size} height={size} style={{ overflow: "visible", display: "block" }}>
+        <svg width={size} height={size} style={{ overflow: "visible", display: "block", cursor: "pointer" }}>
           {slices.map((s, i) => (
             <path
               key={i}
               d={s.path}
               fill={s.color}
               opacity={hovered === null || hovered === i ? 1 : 0.35}
-              style={{ cursor: "pointer", transition: "opacity 0.2s ease" }}
+              style={{ transition: "opacity 0.2s ease" }}
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
+              onClick={() => {
+                if (s.name === "Unclaimed") {
+                  const match = financialYearTransactions.find(
+                    t => t.type !== "income" &&
+                         getCategoryAllowability(t.category) === "conditional" &&
+                         t.hmrcStatus !== "overridden" &&
+                         t.hmrcStatus !== "personal" &&
+                         t.hmrcStatus !== "recategorised"
+                  );
+                  if (match) setHmrcFlagTransaction(match);
+                } else {
+                  setSlicePopup(s.name);
+                }
+              }}
             />
           ))}
-          {/* Centre total */}
-          <text
-            x={cx}
-            y={cy - 10}
-            textAnchor="middle"
-            style={{
-              fontSize: 18,
-              fontWeight: 900,
-              fill: "#09111f",
-              fontFamily: "Inter, Arial, sans-serif",
-              letterSpacing: "-0.04em"
-            }}
-          >
+          <text x={cx} y={cy - 10} textAnchor="middle"
+            style={{ fontSize: 18, fontWeight: 900, fill: "#09111f", fontFamily: "Inter, Arial, sans-serif", letterSpacing: "-0.04em" }}>
             {formatCurrency(grandTotal).replace(".00", "")}
           </text>
-          <text
-            x={cx}
-            y={cy + 10}
-            textAnchor="middle"
-            style={{
-              fontSize: 11,
-              fill: "#6b7280",
-              fontFamily: "Inter, Arial, sans-serif",
-              fontWeight: 600
-            }}
-          >
+          <text x={cx} y={cy + 10} textAnchor="middle"
+            style={{ fontSize: 11, fill: "#6b7280", fontFamily: "Inter, Arial, sans-serif", fontWeight: 600 }}>
             total spend
           </text>
         </svg>
@@ -2214,31 +2231,33 @@ const deleteOtherIncomeSource = (id) => {
           <div className="spending-split-sub">Tap a slice to explore</div>
 
           <div className="spending-split-layout">
-
-            {/* Donut */}
             <div className="spending-donut-wrap">
               <DonutChart />
             </div>
 
-            {/* Three buckets */}
             <div className="spending-buckets">
               {donutData.map((d, i) => (
                 <div
                   key={i}
                   className="spending-bucket"
-                  style={{
-                    borderColor: `${d.color}35`,
-                    background: `${d.color}08`
+                  style={{ borderColor: `${d.color}35`, background: `${d.color}08`, cursor: "pointer" }}
+                  onClick={() => {
+                    if (d.name === "Unclaimed") {
+                      const match = financialYearTransactions.find(
+                        t => t.type !== "income" &&
+                             getCategoryAllowability(t.category) === "conditional" &&
+                             t.hmrcStatus !== "overridden" &&
+                             t.hmrcStatus !== "personal" &&
+                             t.hmrcStatus !== "recategorised"
+                      );
+                      if (match) setHmrcFlagTransaction(match);
+                    } else {
+                      setSlicePopup(d.name);
+                    }
                   }}
                 >
                   <div className="spending-bucket-left">
-                    <div
-                      className="spending-bucket-dot"
-                      style={{
-                        background: d.color,
-                        boxShadow: `0 0 6px ${d.color}60`
-                      }}
-                    />
+                    <div className="spending-bucket-dot" style={{ background: d.color, boxShadow: `0 0 6px ${d.color}60` }} />
                     <div>
                       <div className="spending-bucket-name">{d.name}</div>
                       <div className="spending-bucket-desc">{d.desc}</div>
@@ -2256,11 +2275,72 @@ const deleteOtherIncomeSource = (id) => {
           </div>
         </div>
 
+        {/* SLICE BREAKDOWN POPUP */}
+        {slicePopup && (
+          <div className="hmrc-modal-overlay" onClick={() => setSlicePopup(null)}>
+            <div className="slice-popup" onClick={e => e.stopPropagation()}>
+              <div className="slice-popup-header" style={{ borderLeftColor: getSliceColor(slicePopup) }}>
+                <div>
+                  <div className="slice-popup-title">
+                    {slicePopup === "Business" ? "✅" : "👤"} {slicePopup} expenses
+                  </div>
+                  <div className="slice-popup-total">
+                    {formatCurrency(donutData.find(d => d.name === slicePopup)?.value || 0)}
+                    <span className="slice-popup-pct">
+                      · {grandTotal > 0 ? Math.round(((donutData.find(d => d.name === slicePopup)?.value || 0) / grandTotal) * 100) : 0}% of total spend
+                    </span>
+                  </div>
+                </div>
+                <button className="review-modal-close" onClick={() => setSlicePopup(null)} type="button">✕</button>
+              </div>
+
+              <div className="slice-popup-body">
+                {getSliceEntries(slicePopup).length === 0 ? (
+                  <p className="slice-popup-empty">No categories in this group yet.</p>
+                ) : (
+                  getSliceEntries(slicePopup)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([cat, amt]) => (
+                      <div key={cat} className="slice-popup-row">
+                        <div className="slice-popup-row-left">
+                          <div className="slice-popup-dot" style={{ background: getSliceColor(slicePopup) }} />
+                          <span className="slice-popup-cat">{cat}</span>
+                        </div>
+                        <div className="slice-popup-row-right">
+                          <span className="slice-popup-amt">{formatCurrency(amt)}</span>
+                          <div className="slice-popup-bar-track">
+                            <div
+                              className="slice-popup-bar-fill"
+                              style={{
+                                width: `${(amt / (getSliceEntries(slicePopup).reduce((s, [, a]) => Math.max(s, a), 0))) * 100}%`,
+                                background: getSliceColor(slicePopup)
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                )}
+                {slicePopup === "Business" && (
+  <div className="slice-popup-note">
+    These expenses reduce your tax bill. Enyi stores your receipts and keeps everything ready for HMRC.
+  </div>
+)}
+
+                {slicePopup === "Personal" && (
+                  <div className="slice-popup-note">
+                    These are personal expenses excluded from your tax calculation. If any are wrong, edit them in Transaction History.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TOP 5 CATEGORIES */}
         <div className="spending-top5">
           <div className="spending-top5-title">Top 5 categories</div>
           <div className="spending-top5-sub">Sorted by spend — tap to review</div>
-
           <div className="spending-bars">
             {topCategories.map(({ cat, amt, type }) => (
               <div
@@ -2285,7 +2365,6 @@ const deleteOtherIncomeSource = (id) => {
                     <div style={{
                       width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
                       background: type === "business" ? "#10b981" : type === "unclaimed" ? "#f59e0b" : "#ef4444",
-                      boxShadow: `0 0 5px ${type === "business" ? "#10b98150" : type === "unclaimed" ? "#f59e0b50" : "#ef444450"}`
                     }} />
                     <span className="spending-bar-label">{cat}</span>
                   </div>
@@ -2309,43 +2388,42 @@ const deleteOtherIncomeSource = (id) => {
           </div>
         </div>
 
-{/* ACTION BUTTON */}
-{conditionalEntries.length > 0 && (() => {
-  const unreviewedCount = financialYearTransactions.filter(
-    t => t.type !== "income" &&
-         getCategoryAllowability(t.category) === "conditional" &&
-         t.hmrcStatus !== "overridden" &&
-         t.hmrcStatus !== "personal" &&
-         t.hmrcStatus !== "recategorised"
-  ).length;
-
-  if (unreviewedCount === 0) return null;
-
-  return (
-    <div className="spending-action-wrap">
-      <button
-        className="spending-action-btn"
-        type="button"
-        onClick={() => {
-          const match = financialYearTransactions.find(
+        {/* ACTION BUTTON */}
+        {conditionalEntries.length > 0 && (() => {
+          const unreviewedCount = financialYearTransactions.filter(
             t => t.type !== "income" &&
                  getCategoryAllowability(t.category) === "conditional" &&
                  t.hmrcStatus !== "overridden" &&
                  t.hmrcStatus !== "personal" &&
                  t.hmrcStatus !== "recategorised"
-          );
-          if (match) setHmrcFlagTransaction(match);
-        }}
-      >
-        <span>⚡</span>
-        <span>
-          Review {unreviewedCount} unclaimed {unreviewedCount === 1 ? "item" : "items"} — could save you up to {formatCurrency(unclaimedTotal * 0.20)} in tax
-        </span>
-      </button>
-    </div>
-  );
-})()}
+          ).length;
 
+          if (unreviewedCount === 0) return null;
+
+          return (
+            <div className="spending-action-wrap">
+              <button
+                className="spending-action-btn"
+                type="button"
+                onClick={() => {
+                  const match = financialYearTransactions.find(
+                    t => t.type !== "income" &&
+                         getCategoryAllowability(t.category) === "conditional" &&
+                         t.hmrcStatus !== "overridden" &&
+                         t.hmrcStatus !== "personal" &&
+                         t.hmrcStatus !== "recategorised"
+                  );
+                  if (match) setHmrcFlagTransaction(match);
+                }}
+              >
+                <span>⚡</span>
+                <span>
+                  Review {unreviewedCount} unclaimed {unreviewedCount === 1 ? "item" : "items"} — could save you up to {formatCurrency(unclaimedTotal * 0.20)} in tax
+                </span>
+              </button>
+            </div>
+          );
+        })()}
 
         {/* COLOUR KEY */}
         <div className="spending-key">
@@ -2422,159 +2500,199 @@ const deleteOtherIncomeSource = (id) => {
                         {monthTransactions.map((transaction) => (
                           <div key={transaction.id} className="history-item">
                             {editingId === transaction.id ? (
-                              <div>
-                                <input value={editForm.text}
-                                  onChange={(e) => setEditForm({ ...editForm, text: e.target.value })}
-                                  className="fin-input" />
-                                <select value={editForm.type}
-                                  onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
-                                  className="fin-input">
-                                  <option value="expense">Expense</option>
-                                  <option value="income">Income</option>
-                                </select>
-                                <select value={editForm.category}
-                                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                                  className="fin-input">
-                                  <option value="">Select category</option>
-                                  <option value="Income">Income</option>
-                                  <option value="Travel">Travel (business)</option>
-                                  <option value="Fuel">Fuel (business)</option>
-                                  <option value="Office">Office costs</option>
-                                  <option value="Phone">Phone & internet</option>
-                                  <option value="Software">Software & subscriptions</option>
-                                  <option value="Marketing">Marketing & advertising</option>
-                                  <option value="Professional fees">Professional fees</option>
-                                  <option value="Training">Training & CPD</option>
-                                  <option value="Utilities">Utilities (business)</option>
-                                  <option value="Insurance">Business insurance</option>
-                                  <option value="Stock">Stock & materials</option>
-                                  <option value="Wages">Staff & wages</option>
-                                  <option value="Bank charges">Bank charges</option>
-                                  <option value="Rent">Rent (business premises)</option>
-                                  <option value="Food">Food & drink</option>
-                                  <option value="Clothing">Clothing</option>
-                                  <option value="Groceries">Groceries</option>
-                                  <option value="Mortgage">Mortgage</option>
-                                  <option value="Personal">Personal (non-business)</option>
-                                  <option value="Entertainment">Client entertainment</option>
-                                  <option value="Misc">Miscellaneous</option>
-                                </select>
-                                <input value={editForm.amount}
-                                  onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
-                                  className="fin-input" />
-                                <input type="date" value={editForm.date}
-                                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                                  className="fin-input" />
-                                <div className="button-group">
-                                  <button onClick={() => saveEdit(transaction.id)} className="primary-button">Save</button>
-                                  <button onClick={cancelEdit} className="secondary-button">Cancel</button>
-                                </div>
-                              </div>
-                            ) : (
-<div className="history-item-inner">
-  <div className="history-left">
-    <div className="history-title">{transaction.text}</div>
-    <div className="history-meta">{new Date(transaction.date).toLocaleDateString()}</div>
-
-    {/* ── STATUS BADGE ── */}
-    {transaction.type !== "income" && (() => {
-      const status = transaction.hmrcStatus;
-      const allowability = getCategoryAllowability(transaction.category);
-
-      // BUSINESS
-      if (status === "overridden") {
-        return (
-          <div className="tx-status-row">
-            <span className="tx-badge tx-badge-business">✅ Business expense</span>
-            <button
-              className="tx-status-link"
-              type="button"
-              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
-            >
-              Not business?
-            </button>
-          </div>
-        );
-      }
-
-      // PERSONAL
-      if (status === "personal" || transaction.category === "Personal") {
-        return (
-          <div className="tx-status-row">
-            <span className="tx-badge tx-badge-personal">👤 Personal</span>
-            <button
-              className="tx-status-link"
-              type="button"
-              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
-            >
-              Not personal?
-            </button>
-          </div>
-        );
-      }
-
-      // UNCLAIMED — conditional with no status yet
-      if (allowability === "conditional" && !status) {
-        return (
-          <div className="tx-status-row">
-            <span className="tx-badge tx-badge-unclaimed">⚡ Needs review</span>
-            <button
-              className="tx-review-btn"
-              type="button"
-              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
-            >
-              Review this expense
-            </button>
-          </div>
-        );
-      }
-
-      // NEVER — auto personal
-      if (allowability === "never") {
-        return (
-          <div className="tx-status-row">
-            <span className="tx-badge tx-badge-personal">👤 Personal</span>
-            <button
-              className="tx-status-link"
-              type="button"
-              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
-            >
-              Not personal?
-            </button>
-          </div>
-        );
-      }
-
-      // ALWAYS — auto business
-      if (allowability === "always") {
-        return (
-          <div className="tx-status-row">
-            <span className="tx-badge tx-badge-business">✅ Business expense</span>
-            <button
-              className="tx-status-link"
-              type="button"
-              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
-            >
-              Not business?
-            </button>
-          </div>
-        );
-      }
-
-      return null;
-    })()}
-  </div>
-
-  <div className="history-right">
-    <div className="history-amount">{formatCurrency(transaction.amount)}</div>
-    <div className="button-group history-actions">
-      <button onClick={() => startEditing(transaction)} className="secondary-button small-button">Edit</button>
-      <button onClick={() => deleteTransaction(transaction.id)} className="secondary-button small-button">Delete</button>
+  <div className="tx-edit-form">
+    <div className="tx-edit-header">
+      <span className="tx-edit-title">Edit Transaction</span>
+      <button onClick={cancelEdit} className="review-modal-close" type="button">✕</button>
+    </div>
+    <input
+      value={editForm.text}
+      onChange={(e) => setEditForm({ ...editForm, text: e.target.value })}
+      className="fin-input"
+      placeholder="Description"
+    />
+    <select
+      value={editForm.type}
+      onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+      className="fin-input"
+    >
+      <option value="expense">Expense</option>
+      <option value="income">Income</option>
+    </select>
+    <select
+      value={editForm.category}
+      onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+      className="fin-input"
+    >
+      <option value="">Select category</option>
+      <option value="Income">Income</option>
+      <option value="Travel">Travel (business)</option>
+      <option value="Fuel">Fuel (business)</option>
+      <option value="Office">Office costs</option>
+      <option value="Phone">Phone & internet</option>
+      <option value="Software">Software & subscriptions</option>
+      <option value="Marketing">Marketing & advertising</option>
+      <option value="Professional fees">Professional fees</option>
+      <option value="Training">Training & CPD</option>
+      <option value="Utilities">Utilities (business)</option>
+      <option value="Insurance">Business insurance</option>
+      <option value="Stock">Stock & materials</option>
+      <option value="Wages">Staff & wages</option>
+      <option value="Bank charges">Bank charges</option>
+      <option value="Rent">Rent (business premises)</option>
+      <option value="Food">Food & drink</option>
+      <option value="Clothing">Clothing</option>
+      <option value="Groceries">Groceries</option>
+      <option value="Mortgage">Mortgage</option>
+      <option value="Personal">Personal (non-business)</option>
+      <option value="Entertainment">Client entertainment</option>
+      <option value="Misc">Miscellaneous</option>
+    </select>
+    <input
+      value={editForm.amount}
+      onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+      className="fin-input"
+      placeholder="Amount"
+    />
+    <input
+      type="date"
+      value={editForm.date}
+      onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+      className="fin-input"
+    />
+    <div className="tx-edit-actions">
+      <button onClick={() => saveEdit(transaction.id)} className="primary-button" type="button">Save changes</button>
+      <button onClick={cancelEdit} className="secondary-button" type="button">Cancel</button>
     </div>
   </div>
-</div>
+) : (
+  <div className="history-item-inner">
+    <div className="history-left">
+      <div className="history-title">{transaction.text}</div>
+      <div className="history-meta">
+        {new Date(transaction.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+        <span className="history-meta-dot">·</span>
+        <span className={transaction.type === "income" ? "history-type-income" : "history-type-expense"}>
+          {transaction.type}
+        </span>
+      </div>
 
-                            )}
+      {/* STATUS BADGE */}
+      {transaction.type !== "income" && (() => {
+        const status = transaction.hmrcStatus;
+        const allowability = getCategoryAllowability(transaction.category);
+
+        if (status === "overridden") {
+          return (
+            <div className="tx-status-row">
+              <span className="tx-badge tx-badge-business">✅ Business expense</span>
+              <button className="tx-status-link" type="button"
+                onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}>
+                Not business?
+              </button>
+            </div>
+          );
+        }
+
+        if (status === "personal" || transaction.category === "Personal") {
+          return (
+            <div className="tx-status-row">
+              <span className="tx-badge tx-badge-personal">👤 Personal</span>
+              <button className="tx-status-link" type="button"
+                onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}>
+                Not personal?
+              </button>
+            </div>
+          );
+        }
+
+        if (allowability === "conditional" && !status) {
+          return (
+            <div className="tx-status-row">
+              <span className="tx-badge tx-badge-unclaimed">⚡ Needs review</span>
+              <button className="tx-review-btn" type="button"
+                onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}>
+                Review this expense
+              </button>
+            </div>
+          );
+        }
+
+        if (allowability === "never") {
+          return (
+            <div className="tx-status-row">
+              <span className="tx-badge tx-badge-personal">👤 Personal</span>
+              <button className="tx-status-link" type="button"
+                onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}>
+                Not personal?
+              </button>
+            </div>
+          );
+        }
+
+        if (allowability === "always") {
+          return (
+            <div className="tx-status-row">
+              <span className="tx-badge tx-badge-business">✅ Business expense</span>
+              <button className="tx-status-link" type="button"
+                onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}>
+                Not business?
+              </button>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
+    </div>
+
+    <div className="history-right">
+      <div className={`history-amount ${transaction.type === "income" ? "history-amount-income" : ""}`}>
+        {transaction.type === "income" ? "+" : ""}{formatCurrency(transaction.amount)}
+      </div>
+
+      {/* THREE DOT MENU */}
+      <div className="tx-menu-wrap">
+        <button
+          className="tx-menu-btn"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenMenuId(openMenuId === transaction.id ? null : transaction.id);
+          }}
+        >
+          ⋯
+        </button>
+        {openMenuId === transaction.id && (
+          <div className="tx-dropdown" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="tx-dropdown-item"
+              type="button"
+              onClick={() => {
+                startEditing(transaction);
+                setOpenMenuId(null);
+              }}
+            >
+              <span>✏️</span> Edit
+            </button>
+            <div className="tx-dropdown-divider" />
+            <button
+              className="tx-dropdown-item tx-dropdown-delete"
+              type="button"
+              onClick={() => {
+                deleteTransaction(transaction.id);
+                setOpenMenuId(null);
+              }}
+            >
+              <span>🗑️</span> Delete
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
                           </div>
                         ))}
                       </div>
