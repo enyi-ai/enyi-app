@@ -316,7 +316,25 @@ app.post("/api/categorise-expense", async (req, res) => {
         {
           role: "system",
           content:
-            "You extract an expense category and amount from a user's text. Return valid JSON only."
+          `You are a UK HMRC tax categorisation assistant for self-employed sole traders.
+
+Given an expense description, return a JSON object with exactly these fields:
+- category: the HMRC expense category
+- amount: the numeric amount extracted from the text (0 if not found)
+- allowability: one of "always", "conditional", or "never"
+- confidence: one of "high", "medium", or "low"
+- hmrcNote: brief plain English note explaining the allowability
+
+ALLOWABILITY RULES:
+- "always": clearly business (Software, Marketing, Office, Professional fees, Insurance, Stock, Wages, Bank charges)
+- "never": clearly personal (Groceries, Mortgage, Personal, Shopping, Entertainment)
+- "conditional": ambiguous, depends on business use (Fuel, Travel, Food, Phone, Utilities, Clothing, Rent, Training)
+
+CATEGORIES — use exactly these values:
+Travel, Fuel, Office, Phone, Software, Marketing, Professional fees, Training, Utilities, Insurance, Stock, Wages, Bank charges, Rent, Food, Clothing, Groceries, Mortgage, Personal, Entertainment, Misc
+
+Return ONLY valid JSON. No text outside the JSON.`
+
         },
         {
           role: "user",
@@ -345,9 +363,13 @@ Return EXACTLY in this JSON format:
     const parsed = JSON.parse(cleaned);
 
     return res.json({
-      category: parsed.category || "Misc",
-      amount: Number(parsed.amount) || 0
-    });
+  category: parsed.category,
+  amount: parsed.amount,
+  allowability: parsed.allowability || "conditional",
+  confidence: parsed.confidence || "medium",
+  hmrcNote: parsed.hmrcNote || ""
+});
+
   } catch (error) {
     console.error("Categorise expense error:", error);
     return res.status(500).json({

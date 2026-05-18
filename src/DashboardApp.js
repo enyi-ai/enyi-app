@@ -13,13 +13,15 @@ import {
   getDoc,               
 } from "firebase/firestore";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import "./App.css";
 import logoIcon from "./assets/enyi-icon.png";
 import AIChatPanel from "./components/AIChatPanel";
 import { FiMenu } from "react-icons/fi";
 import HMRCFlagModal from "./components/HMRCFlagModal";
+// eslint-disable-next-line no-unused-vars
 import { shouldFlag, getCategoryAllowability } from "./hmrcRules";
+
 import {
   calculateTaxSummary,
   getTaxRegionNarrative,
@@ -92,18 +94,6 @@ const [showSettings, setShowSettings] = useState(false);
 const [goalLoaded, setGoalLoaded] = useState(false);
 const [taxRegion, setTaxRegion] = useState("england_wales");
 const [regionLoaded, setRegionLoaded] = useState(false);
-
-
-
-  const [expandedCategories, setExpandedCategories] = useState({
-  always: true,
-  conditional: false,
-  never: false
-});
-
-const toggleCategorySection = (section) => {
-  setExpandedCategories(prev => ({ ...prev, [section]: !prev[section] }));
-};
 
 
   useEffect(() => {
@@ -275,6 +265,7 @@ useEffect(() => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // eslint-disable-next-line no-unused-vars
   const getCategoryColor = (category) => {
     const key = (category || "").toLowerCase();
     if (key === "food") return "chip-food";
@@ -409,6 +400,26 @@ const toggleDrawer = (drawer) => {
   };
 
   const handleHmrcDismiss = () => setHmrcFlagTransaction(null);
+  const handleHmrcMoveToUnclaimed = async (transactionId) => {
+  if (!currentUser) return;
+  try {
+    await updateDoc(
+      doc(db, "users", currentUser.uid, "transactions", transactionId),
+      { hmrcStatus: null, hmrcOverrideReason: null }
+    );
+    setTransactions(prev =>
+      prev.map(t =>
+        t.id === transactionId
+          ? { ...t, hmrcStatus: null, hmrcOverrideReason: null }
+          : t
+      )
+    );
+  } catch (error) {
+    console.error("Failed to move to unclaimed:", error);
+  }
+  setHmrcFlagTransaction(null);
+};
+
 
   const addTransaction = async () => {
     setStatusMessage("");
@@ -454,15 +465,29 @@ const toggleDrawer = (drawer) => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not categorise expense.");
 
-      const finalCategory = normalizeCategory(data.category, input);
-      const newTransaction = {
-        id: Date.now(),
-        text: input,
-        category: finalCategory,
-        amount: Number(data.amount) || 0,
-        date: new Date(transactionDate).toISOString(),
-        type: "expense"
-      };
+  const finalCategory = normalizeCategory(data.category, input);
+const allowability = data.allowability || getCategoryAllowability(finalCategory);
+const autoHmrcStatus =
+  allowability === "never" ? "personal" :
+  allowability === "always" ? "overridden" :
+  null;
+
+const autoHmrcReason =
+  allowability === "always"
+    ? "Auto-classified as business expense by Enyi"
+    : undefined;
+
+const newTransaction = {
+  id: Date.now(),
+  text: input,
+  category: finalCategory,
+  amount: Number(data.amount) || 0,
+  date: new Date(transactionDate).toISOString(),
+  type: "expense",
+  ...(autoHmrcStatus && { hmrcStatus: autoHmrcStatus }),
+  ...(autoHmrcReason && { hmrcOverrideReason: autoHmrcReason }),
+};
+
       if (!currentUser) return;
       const firestoreTransaction = { ...newTransaction, createdAt: serverTimestamp() };
       const docRef = await addDoc(
@@ -478,16 +503,6 @@ const toggleDrawer = (drawer) => {
       );
       setTimeout(() => setTransactionSuccessMessage(""), 2500);
 
-      if (shouldFlag(finalCategory)) {
-        setTimeout(() => {
-          setHmrcFlagTransaction({
-            id: docRef.id,
-            text: input,
-            amount: Number(data.amount) || 0,
-            category: finalCategory
-          });
-        }, 800);
-      }
     } catch (error) {
       console.error(error);
       setTransactionSuccessMessage("");
@@ -559,14 +574,28 @@ const toggleDrawer = (drawer) => {
   const confirmReceiptSave = async () => {
     if (!receiptPreview) return;
     const safeDate = convertUkDateToIso(receiptPreview.date);
-    const newTransaction = {
-      id: Date.now(),
-      text: receiptPreview.merchant,
-      category: receiptPreview.category,
-      amount: receiptPreview.amount,
-      date: safeDate,
-      type: "expense"
-    };
+ const receiptAllowability = getCategoryAllowability(receiptPreview.category);
+const receiptHmrcStatus =
+  receiptAllowability === "never" ? "personal" :
+  receiptAllowability === "always" ? "overridden" :
+  null;
+
+const receiptHmrcReason =
+  receiptAllowability === "always"
+    ? "Auto-classified as business expense by Enyi"
+    : undefined;
+
+const newTransaction = {
+  id: Date.now(),
+  text: receiptPreview.merchant,
+  category: receiptPreview.category,
+  amount: receiptPreview.amount,
+  date: safeDate,
+  type: "expense",
+  ...(receiptHmrcStatus && { hmrcStatus: receiptHmrcStatus }),
+  ...(receiptHmrcReason && { hmrcOverrideReason: receiptHmrcReason }),
+};
+
     if (!currentUser) return;
     const firestoreTransaction = { ...newTransaction, createdAt: serverTimestamp() };
     const docRef = await addDoc(
@@ -578,16 +607,7 @@ const toggleDrawer = (drawer) => {
       `Receipt added: ${receiptPreview.merchant} (${formatCurrency(receiptPreview.amount)}) • Saved to ${getFinancialYearLabelFromDate(safeDate)}`
     );
     resetReceiptInputs();
-    if (shouldFlag(receiptPreview.category)) {
-      setTimeout(() => {
-        setHmrcFlagTransaction({
-          id: docRef.id,
-          text: receiptPreview.merchant,
-          amount: Number(receiptPreview.amount) || 0,
-          category: receiptPreview.category
-        });
-      }, 800);
-    }
+
   };
 
   const cancelReceiptReview = () => resetReceiptInputs();
@@ -2012,14 +2032,47 @@ const deleteOtherIncomeSource = (id) => {
 
 </section>
 
-  <div id="spending-categories" className="fin-card">
-  <div className="section-head">
-    <h2>Spending by Category</h2>
-    <p>See where your money is going in {selectedFinancialYear}</p>
+ <div id="spending-categories" className="fin-card spending-card">
+
+  {/* HEADER */}
+  <div className="spending-header">
+    <div className="spending-header-left">
+      <div className="spending-header-icon">💼</div>
+      <div>
+        <h2 className="spending-title">Where Your Money Works</h2>
+        <p className="spending-subtitle">
+          {selectedFinancialYear} · {Object.entries(categoryTotals).length} categories tracked
+        </p>
+      </div>
+    </div>
+    <div className="brand-chip">Live</div>
   </div>
 
+  {/* TAX SAVING HERO */}
+  {allowableExpenses > 0 && (
+    <div className="spending-hero-stat">
+      <div className="spending-hero-left">
+        <span className="spending-hero-icon">🎯</span>
+        <div>
+          <div className="spending-hero-label">Estimated tax saved this year</div>
+          <div className="spending-hero-sub">
+            Based on {formatCurrency(allowableExpenses)} in business expenses
+          </div>
+        </div>
+      </div>
+      <div className="spending-hero-value">
+        {formatCurrency(allowableExpenses * 0.20)}
+        <span className="spending-hero-rate">at 20%</span>
+      </div>
+    </div>
+  )}
+
   {Object.entries(categoryTotals).length === 0 ? (
-    <p className="empty-text">No expense categories yet for {selectedFinancialYear}.</p>
+    <div className="spending-empty">
+      <span className="spending-empty-icon">📊</span>
+      <p>No expenses yet for {selectedFinancialYear}.</p>
+      <p className="spending-empty-sub">Add transactions and Enyi will categorise them for you.</p>
+    </div>
   ) : (() => {
     const allEntries = Object.entries(categoryTotals);
 
@@ -2038,149 +2091,248 @@ const deleteOtherIncomeSource = (id) => {
       !overriddenCategories.has(cat)
     );
 
-    const renderBar = (cat, amt) => (
-      <div
-        key={cat}
-        className="chart-row chart-row-clickable"
-        onClick={() => {
-          const allowability = getCategoryAllowability(cat);
-          if (allowability === "conditional" || allowability === "never") {
-            const match = financialYearTransactions.find(
-              t => t.type !== "income" &&
-                   t.category === cat &&
-                   t.hmrcStatus !== "overridden" &&
-                   t.hmrcStatus !== "personal" &&
-                   t.hmrcStatus !== "recategorised"
-            );
-            if (match) setHmrcFlagTransaction(match);
-          }
-        }}
-      >
-        <div className="chart-row-top">
-          <span className="cat-label">{cat}</span>
-          <span className="cat-amount">{formatCurrency(amt)}</span>
-        </div>
-        <div className="chart-track">
-          <div
-            className="chart-fill-premium"
-            style={{
-              width: maxCategoryAmount > 0 ? `${(amt / maxCategoryAmount) * 100}%` : "0%",
-              background: overriddenCategories.has(cat)
-                ? "#10b981"
-                : getCategoryAllowability(cat) === "always"
-                ? "#10b981"
-                : getCategoryAllowability(cat) === "conditional"
-                ? "#f59e0b"
-                : "#ef4444"
-            }}
-          />
-        </div>
-      </div>
-    );
+    const businessTotal = allowableEntries.reduce((s, [, a]) => s + a, 0);
+    const unclaimedTotal = conditionalEntries.reduce((s, [, a]) => s + a, 0);
+    const personalTotal = neverEntries.reduce((s, [, a]) => s + a, 0);
+    const grandTotal = businessTotal + unclaimedTotal + personalTotal;
 
-    const SectionHeader = ({ type, label, total, count }) => {
-      const isOpen = expandedCategories[type];
-      const colors = {
-        always: { bg: "#f0fdf4", border: "#bbf7d0", text: "#065f46", accent: "#10b981" },
-        conditional: { bg: "#fffbeb", border: "#fde68a", text: "#78350f", accent: "#f59e0b" },
-        never: { bg: "#fff5f5", border: "#fecaca", text: "#7f1d1d", accent: "#ef4444" }
-      };
-      const c = colors[type];
+    const donutData = [
+      { name: "Business", value: businessTotal, color: "#10b981", desc: "Tax deductible expenses" },
+      { name: "Unclaimed", value: unclaimedTotal, color: "#f59e0b", desc: "Could reduce your tax bill" },
+      { name: "Personal", value: personalTotal, color: "#ef4444", desc: "Not tax deductible" },
+    ].filter(d => d.value > 0);
+
+    const topCategories = allEntries
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([cat, amt]) => ({
+        cat, amt,
+        type: overriddenCategories.has(cat) || getCategoryAllowability(cat) === "always"
+          ? "business"
+          : getCategoryAllowability(cat) === "conditional" && !personalCategories.has(cat)
+          ? "unclaimed"
+          : "personal"
+      }));
+
+    const DonutChart = () => {
+      const size = 200;
+      const cx = size / 2;
+      const cy = size / 2;
+      const radius = 88;
+      const innerRadius = 56;
+      const [hovered, setHovered] = React.useState(null);
+
+      let cumulative = 0;
+      const slices = donutData.map((d, i) => {
+        const pct = grandTotal > 0 ? d.value / grandTotal : 0;
+        const startAngle = cumulative * 2 * Math.PI - Math.PI / 2;
+        cumulative += pct;
+        const endAngle = cumulative * 2 * Math.PI - Math.PI / 2;
+        const r = hovered === i ? radius + 5 : radius;
+        const x1 = cx + r * Math.cos(startAngle);
+        const y1 = cy + r * Math.sin(startAngle);
+        const x2 = cx + r * Math.cos(endAngle);
+        const y2 = cy + r * Math.sin(endAngle);
+        const xi1 = cx + innerRadius * Math.cos(startAngle);
+        const yi1 = cy + innerRadius * Math.sin(startAngle);
+        const xi2 = cx + innerRadius * Math.cos(endAngle);
+        const yi2 = cy + innerRadius * Math.sin(endAngle);
+        const largeArc = pct > 0.5 ? 1 : 0;
+        const path = pct >= 1
+          ? `M ${cx + r} ${cy} A ${r} ${r} 0 1 1 ${cx + r - 0.01} ${cy} Z`
+          : `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${xi2} ${yi2} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${xi1} ${yi1} Z`;
+        return { ...d, path, pct, i };
+      });
 
       return (
-        <button
-          className="cat-section-header"
-          onClick={() => toggleCategorySection(type)}
-          style={{ background: c.bg, borderColor: c.border }}
-          type="button"
-        >
-          <div className="cat-section-header-left">
-            <div className="cat-section-dot" style={{ background: c.accent }} />
-            <span className="cat-section-label" style={{ color: c.text }}>
-              {label}
-            </span>
-            <span className="cat-section-count" style={{ color: c.accent }}>
-              {count} {count === 1 ? "category" : "categories"}
-            </span>
-          </div>
-          <div className="cat-section-header-right">
-            <span className="cat-section-total" style={{ color: c.text }}>
-              {formatCurrency(total)}
-            </span>
-            <span
-              className="cat-section-chevron"
-              style={{
-                color: c.text,
-                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)"
-              }}
-            >
-              ▾
-            </span>
-          </div>
-        </button>
+        <svg width={size} height={size} style={{ overflow: "visible", display: "block" }}>
+          {slices.map((s, i) => (
+            <path
+              key={i}
+              d={s.path}
+              fill={s.color}
+              opacity={hovered === null || hovered === i ? 1 : 0.35}
+              style={{ cursor: "pointer", transition: "opacity 0.2s ease" }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+            />
+          ))}
+          {/* Centre total */}
+          <text
+            x={cx}
+            y={cy - 10}
+            textAnchor="middle"
+            style={{
+              fontSize: 18,
+              fontWeight: 900,
+              fill: "#09111f",
+              fontFamily: "Inter, Arial, sans-serif",
+              letterSpacing: "-0.04em"
+            }}
+          >
+            {formatCurrency(grandTotal).replace(".00", "")}
+          </text>
+          <text
+            x={cx}
+            y={cy + 10}
+            textAnchor="middle"
+            style={{
+              fontSize: 11,
+              fill: "#6b7280",
+              fontFamily: "Inter, Arial, sans-serif",
+              fontWeight: 600
+            }}
+          >
+            total spend
+          </text>
+        </svg>
       );
     };
 
     return (
-      <div className="category-sections">
+      <div>
 
+        {/* YOUR SPENDING SPLIT */}
+        <div className="spending-split-section">
+          <div className="spending-split-title">Your spending split</div>
+          <div className="spending-split-sub">Tap a slice to explore</div>
 
-        {/* ALLOWABLE */}
-        {allowableEntries.length > 0 && (
-          <div className="cat-section">
-            <SectionHeader
-              type="always"
-              label="Reduces your tax bill"
-              total={allowableEntries.reduce((s, [, a]) => s + a, 0)}
-              count={allowableEntries.length}
-            />
-            {expandedCategories.always && (
-              <div className="cat-section-body">
-                {allowableEntries.map(([cat, amt]) => renderBar(cat, amt))}
-              </div>
-            )}
+          <div className="spending-split-layout">
+
+            {/* Donut */}
+            <div className="spending-donut-wrap">
+              <DonutChart />
+            </div>
+
+            {/* Three buckets */}
+            <div className="spending-buckets">
+              {donutData.map((d, i) => (
+                <div
+                  key={i}
+                  className="spending-bucket"
+                  style={{
+                    borderColor: `${d.color}35`,
+                    background: `${d.color}08`
+                  }}
+                >
+                  <div className="spending-bucket-left">
+                    <div
+                      className="spending-bucket-dot"
+                      style={{
+                        background: d.color,
+                        boxShadow: `0 0 6px ${d.color}60`
+                      }}
+                    />
+                    <div>
+                      <div className="spending-bucket-name">{d.name}</div>
+                      <div className="spending-bucket-desc">{d.desc}</div>
+                    </div>
+                  </div>
+                  <div className="spending-bucket-right">
+                    <div className="spending-bucket-amount">{formatCurrency(d.value)}</div>
+                    <div className="spending-bucket-pct">
+                      {grandTotal > 0 ? Math.round((d.value / grandTotal) * 100) : 0}%
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* CONDITIONAL */}
+        {/* TOP 5 CATEGORIES */}
+        <div className="spending-top5">
+          <div className="spending-top5-title">Top 5 categories</div>
+          <div className="spending-top5-sub">Sorted by spend — tap to review</div>
+
+          <div className="spending-bars">
+            {topCategories.map(({ cat, amt, type }) => (
+              <div
+                key={cat}
+                className="spending-bar-row"
+                onClick={() => {
+                  const allowability = getCategoryAllowability(cat);
+                  if (allowability === "conditional" || allowability === "never") {
+                    const match = financialYearTransactions.find(
+                      t => t.type !== "income" &&
+                           t.category === cat &&
+                           t.hmrcStatus !== "overridden" &&
+                           t.hmrcStatus !== "personal" &&
+                           t.hmrcStatus !== "recategorised"
+                    );
+                    if (match) setHmrcFlagTransaction(match);
+                  }
+                }}
+              >
+                <div className="spending-bar-top">
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                      background: type === "business" ? "#10b981" : type === "unclaimed" ? "#f59e0b" : "#ef4444",
+                      boxShadow: `0 0 5px ${type === "business" ? "#10b98150" : type === "unclaimed" ? "#f59e0b50" : "#ef444450"}`
+                    }} />
+                    <span className="spending-bar-label">{cat}</span>
+                  </div>
+                  <span className="spending-bar-amount">{formatCurrency(amt)}</span>
+                </div>
+                <div className="spending-bar-track">
+                  <div
+                    className="spending-bar-fill"
+                    style={{
+                      width: maxCategoryAmount > 0 ? `${(amt / maxCategoryAmount) * 100}%` : "0%",
+                      background: type === "business"
+                        ? "linear-gradient(90deg, #10b981, #2fe1c2)"
+                        : type === "unclaimed"
+                        ? "linear-gradient(90deg, #f59e0b, #fbbf24)"
+                        : "linear-gradient(90deg, #ef4444, #f87171)"
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ACTION BUTTON */}
         {conditionalEntries.length > 0 && (
-          <div className="cat-section">
-            <SectionHeader
-              type="conditional"
-            label="Needs a quick check"
-              total={conditionalEntries.reduce((s, [, a]) => s + a, 0)}
-              count={conditionalEntries.length}
-            />
-            {expandedCategories.conditional && (
-              <div className="cat-section-body">
-                <p className="cat-section-note">
-                 These could reduce your tax bill — but only if they were genuinely for work. Tap any item to confirm it or move it to personal.
-                </p>
-                {conditionalEntries.map(([cat, amt]) => renderBar(cat, amt))}
-              </div>
-            )}
+          <div className="spending-action-wrap">
+            <button
+              className="spending-action-btn"
+              type="button"
+              onClick={() => {
+                const match = financialYearTransactions.find(
+                  t => t.type !== "income" &&
+                       getCategoryAllowability(t.category) === "conditional" &&
+                       t.hmrcStatus !== "overridden" &&
+                       t.hmrcStatus !== "personal" &&
+                       t.hmrcStatus !== "recategorised"
+                );
+                if (match) setHmrcFlagTransaction(match);
+              }}
+            >
+              <span>⚡</span>
+              <span>
+                Review {conditionalEntries.length} unclaimed {conditionalEntries.length === 1 ? "item" : "items"} — could save you {formatCurrency(unclaimedTotal * 0.20)} in tax
+              </span>
+            </button>
           </div>
         )}
 
-        {/* NOT ALLOWABLE */}
-        {neverEntries.length > 0 && (
-          <div className="cat-section">
-            <SectionHeader
-              type="never"
-              label="Personal — no tax benefit"
-              total={neverEntries.reduce((s, [, a]) => s + a, 0)}
-              count={neverEntries.length}
-            />
-            {expandedCategories.never && (
-              <div className="cat-section-body">
-                <p className="cat-section-note">
-                 HMRC won't accept these as business expenses so they don't reduce your tax. If something is here by mistake, tap it to move it.
-                </p>
-                {neverEntries.map(([cat, amt]) => renderBar(cat, amt))}
-              </div>
-            )}
+        {/* COLOUR KEY */}
+        <div className="spending-key">
+          <div className="spending-key-item">
+            <div className="spending-key-dot" style={{ background: "#10b981" }} />
+            <span>Tax deductible</span>
           </div>
-        )}
+          <div className="spending-key-item">
+            <div className="spending-key-dot" style={{ background: "#f59e0b" }} />
+            <span>Needs review</span>
+          </div>
+          <div className="spending-key-item">
+            <div className="spending-key-dot" style={{ background: "#ef4444" }} />
+            <span>Not deductible</span>
+          </div>
+        </div>
 
       </div>
     );
@@ -2290,91 +2442,109 @@ const deleteOtherIncomeSource = (id) => {
                                 </div>
                               </div>
                             ) : (
-                              <div className="history-item-inner">
-                                <div className="history-left">
-                                  <div className="history-title">{transaction.text}</div>
-                                  <div className="history-meta">{new Date(transaction.date).toLocaleDateString()}</div>
+<div className="history-item-inner">
+  <div className="history-left">
+    <div className="history-title">{transaction.text}</div>
+    <div className="history-meta">{new Date(transaction.date).toLocaleDateString()}</div>
 
-                                  <div className="history-chip-row">
-                                    <span className={`category-chip ${getCategoryColor(transaction.category)}`}>
-                                      {transaction.category}
-                                    </span>
-                                    <span className={`type-chip ${transaction.type === "income" ? "type-income" : "type-expense"}`}>
-                                      {transaction.type}
-                                    </span>
+    {/* ── STATUS BADGE ── */}
+    {transaction.type !== "income" && (() => {
+      const status = transaction.hmrcStatus;
+      const allowability = getCategoryAllowability(transaction.category);
 
-                                    {/* ── HMRC STATUS BADGE ── */}
-                                    {transaction.type !== "income" && (() => {
-                                      const status = transaction.hmrcStatus;
-                                      if (status === "overridden") {
-                                        return (
-                                          <span className="hmrc-badge hmrc-badge-overridden" title={transaction.hmrcOverrideReason}>
-                                            ✓ Allowable
-                                          </span>
-                                        );
-                                      }
-                                      if (status === "personal") {
-                                        return <span className="hmrc-badge hmrc-badge-personal">Personal</span>;
-                                      }
-                                      if (status === "recategorised") return null;
-                                      const allowability = getCategoryAllowability(transaction.category);
-                                      if (allowability === "never") {
-                                        return <span className="hmrc-badge hmrc-badge-never">🚨 Not allowable</span>;
-                                      }
-                                      if (allowability === "conditional") {
-                                        return <span className="hmrc-badge hmrc-badge-conditional">⚠️ Check HMRC</span>;
-                                      }
-                                      return null;
-                                    })()}
-                                  </div>
+      // BUSINESS
+      if (status === "overridden") {
+        return (
+          <div className="tx-status-row">
+            <span className="tx-badge tx-badge-business">✅ Business expense</span>
+            <button
+              className="tx-status-link"
+              type="button"
+              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
+            >
+              Not business?
+            </button>
+          </div>
+        );
+      }
 
-                                  {/* ── HMRC QUICK ACTIONS ── */}
-                                  {transaction.type !== "income" && (() => {
-                                    const allowability = getCategoryAllowability(transaction.category);
-                                    const status = transaction.hmrcStatus;
-                                    if (status === "overridden") {
-                                      return (
-                                        <div className="hmrc-allowable-confirmed">
-                                          <span style={{ fontSize: "12px", color: "#065f46" }}>
-                                            ✓ {transaction.hmrcOverrideReason}
-                                          </span>
-                                        </div>
-                                      );
-                                    }
-                                    if (status === "personal") return null;
-                                    if (status === "recategorised") return null;
-                                    if (allowability === "never" || allowability === "conditional") {
-                                      return (
-                                        <div className="hmrc-quick-actions">
-                                          <button
-                                            className="hmrc-quick-btn hmrc-quick-allowable"
-                                            onClick={() => setHmrcFlagTransaction({ ...transaction, quickMode: "confirm" })}
-                                            type="button"
-                                          >
-                                            + Add to allowable
-                                          </button>
-                                          <button
-                                            className="hmrc-quick-btn hmrc-quick-personal"
-                                            onClick={() => handleHmrcMarkPersonal(transaction.id)}
-                                            type="button"
-                                          >
-                                            Move to personal
-                                          </button>
-                                        </div>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
-                                </div>
+      // PERSONAL
+      if (status === "personal" || transaction.category === "Personal") {
+        return (
+          <div className="tx-status-row">
+            <span className="tx-badge tx-badge-personal">👤 Personal</span>
+            <button
+              className="tx-status-link"
+              type="button"
+              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
+            >
+              Not personal?
+            </button>
+          </div>
+        );
+      }
 
-                                <div className="history-right">
-                                  <div className="history-amount">{formatCurrency(transaction.amount)}</div>
-                                  <div className="button-group history-actions">
-                                    <button onClick={() => startEditing(transaction)} className="secondary-button small-button">Edit</button>
-                                    <button onClick={() => deleteTransaction(transaction.id)} className="secondary-button small-button">Delete</button>
-                                  </div>
-                                </div>
-                              </div>
+      // UNCLAIMED — conditional with no status yet
+      if (allowability === "conditional" && !status) {
+        return (
+          <div className="tx-status-row">
+            <span className="tx-badge tx-badge-unclaimed">⚡ Needs review</span>
+            <button
+              className="tx-review-btn"
+              type="button"
+              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
+            >
+              Review this expense
+            </button>
+          </div>
+        );
+      }
+
+      // NEVER — auto personal
+      if (allowability === "never") {
+        return (
+          <div className="tx-status-row">
+            <span className="tx-badge tx-badge-personal">👤 Personal</span>
+            <button
+              className="tx-status-link"
+              type="button"
+              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
+            >
+              Not personal?
+            </button>
+          </div>
+        );
+      }
+
+      // ALWAYS — auto business
+      if (allowability === "always") {
+        return (
+          <div className="tx-status-row">
+            <span className="tx-badge tx-badge-business">✅ Business expense</span>
+            <button
+              className="tx-status-link"
+              type="button"
+              onClick={() => setHmrcFlagTransaction({ ...transaction, reviewMode: true })}
+            >
+              Not business?
+            </button>
+          </div>
+        );
+      }
+
+      return null;
+    })()}
+  </div>
+
+  <div className="history-right">
+    <div className="history-amount">{formatCurrency(transaction.amount)}</div>
+    <div className="button-group history-actions">
+      <button onClick={() => startEditing(transaction)} className="secondary-button small-button">Edit</button>
+      <button onClick={() => deleteTransaction(transaction.id)} className="secondary-button small-button">Delete</button>
+    </div>
+  </div>
+</div>
+
                             )}
                           </div>
                         ))}
@@ -2392,15 +2562,17 @@ const deleteOtherIncomeSource = (id) => {
         )}
 
         {/* ── HMRC FLAG MODAL ── */}
-        {hmrcFlagTransaction && (
-          <HMRCFlagModal
-            transaction={hmrcFlagTransaction}
-            onOverride={handleHmrcOverride}
-            onRecategorise={handleHmrcRecategorise}
-            onMarkPersonal={handleHmrcMarkPersonal}
-            onClose={handleHmrcDismiss}
-          />
-        )}
+  {hmrcFlagTransaction && (
+  <HMRCFlagModal
+    transaction={hmrcFlagTransaction}
+    onOverride={handleHmrcOverride}
+    onRecategorise={handleHmrcRecategorise}
+    onMarkPersonal={handleHmrcMarkPersonal}
+    onMoveToUnclaimed={handleHmrcMoveToUnclaimed}
+    onClose={handleHmrcDismiss}
+  />
+)}
+
 {/* GOAL SETUP MODAL */}
 {showGoalSetup && (
   <GoalSetupModal
