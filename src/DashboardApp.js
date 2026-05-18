@@ -326,6 +326,17 @@ const handleSaveRegion = async (region) => {
   }
 };
 
+const handleSaveOtherIncome = async (sources) => {
+  if (!currentUser) return;
+  try {
+    const userDocRef = doc(db, "users", currentUser.uid);
+    await updateDoc(userDocRef, { otherIncomeSources: sources });
+    setOtherIncomeSources(sources);
+  } catch (error) {
+    console.error("Failed to save other income:", error);
+  }
+};
+
 
 const handleSkipGoal = () => {
   setShowGoalSetup(false);
@@ -2408,8 +2419,10 @@ const deleteOtherIncomeSource = (id) => {
   onClearData={clearAllTransactions}
   currentRegion={taxRegion}
   onSaveRegion={handleSaveRegion}
-/>
+  otherIncomeSources={otherIncomeSources}
+onSaveOtherIncome={handleSaveOtherIncome}
 
+/>
 
 )}
 

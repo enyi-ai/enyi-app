@@ -334,3 +334,240 @@
     font-size: 20px;
   }
 }
+
+/* ── OTHER INCOME SECTION ── */
+.other-income-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.other-income-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.other-income-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e8edf5;
+  border-radius: 14px;
+  background: #f8fafc;
+  transition: border-color 0.15s ease;
+}
+
+.other-income-item:focus-within {
+  border-color: #2fe1c2;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(47, 225, 194, 0.10);
+}
+
+.other-income-item-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.other-income-item-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.other-income-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.other-income-item-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #09111f;
+}
+
+.other-income-item-desc {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.other-income-item-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: hidden;
+  flex-shrink: 0;
+  width: 120px;
+  transition: border-color 0.15s ease;
+}
+
+.other-income-item-input-wrap:focus-within {
+  border-color: #2fe1c2;
+}
+
+.other-income-item-currency {
+  padding: 0 4px 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #09111f;
+}
+
+.other-income-item-input {
+  border: none;
+  outline: none;
+  padding: 10px 8px 10px 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #09111f;
+  font-family: inherit;
+  background: transparent;
+  width: 100%;
+}
+
+.other-income-item-input::placeholder {
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+.other-income-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #fafffe 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+}
+
+.other-income-total-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.other-income-total-value {
+  font-size: 16px;
+  font-weight: 900;
+  color: #065f46;
+  letter-spacing: -0.03em;
+}
+
+.other-income-note {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.6;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+}
+
+@media (max-width: 768px) {
+  .other-income-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .other-income-item-input-wrap {
+    width: 100%;
+  }
+}
+
+/* ── SETTINGS DRAWERS ── */
+.settings-drawer {
+  border: 1px solid #e8edf5;
+  border-radius: 16px;
+  overflow: hidden;
+  margin: 0 0 8px 0;
+  box-shadow: 0 2px 8px rgba(9, 17, 31, 0.04);
+}
+
+.settings-drawer-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border: none;
+  background: #fafbfd;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease;
+  text-align: left;
+}
+
+.settings-drawer-header:hover {
+  background: #f1f5f9;
+}
+
+.settings-drawer-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-drawer-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.settings-drawer-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #09111f;
+  letter-spacing: -0.2px;
+}
+
+.settings-drawer-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.settings-drawer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.settings-drawer-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: #09111f;
+}
+
+.settings-drawer-chevron {
+  font-size: 16px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.settings-drawer-chevron.open {
+  transform: rotate(180deg);
+}
+
+.settings-drawer-body {
+  padding: 16px 18px 18px;
+  border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  animation: fadeIn 0.16s ease;
+}
+
+/* remove old section padding since drawers handle it now */
+.settings-modal-body .settings-section {
+  padding: 0;
+}
