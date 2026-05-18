@@ -2080,11 +2080,18 @@ const deleteOtherIncomeSource = (id) => {
       getCategoryAllowability(cat) === "always" || overriddenCategories.has(cat)
     );
 
-    const conditionalEntries = allEntries.filter(([cat]) =>
-      getCategoryAllowability(cat) === "conditional" &&
-      !overriddenCategories.has(cat) &&
-      !personalCategories.has(cat)
-    );
+  const conditionalEntries = allEntries.filter(([cat]) =>
+  getCategoryAllowability(cat) === "conditional" &&
+  !personalCategories.has(cat) &&
+  financialYearTransactions.some(
+    t => t.type !== "income" &&
+         t.category === cat &&
+         t.hmrcStatus !== "overridden" &&
+         t.hmrcStatus !== "personal" &&
+         t.hmrcStatus !== "recategorised"
+  )
+);
+
 
     const neverEntries = allEntries.filter(([cat]) =>
       (getCategoryAllowability(cat) === "never" || personalCategories.has(cat)) &&
@@ -2092,7 +2099,16 @@ const deleteOtherIncomeSource = (id) => {
     );
 
     const businessTotal = allowableEntries.reduce((s, [, a]) => s + a, 0);
-    const unclaimedTotal = conditionalEntries.reduce((s, [, a]) => s + a, 0);
+    const unclaimedTotal = financialYearTransactions
+  .filter(t =>
+    t.type !== "income" &&
+    getCategoryAllowability(t.category) === "conditional" &&
+    t.hmrcStatus !== "overridden" &&
+    t.hmrcStatus !== "personal" &&
+    t.hmrcStatus !== "recategorised"
+  )
+  .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
     const personalTotal = neverEntries.reduce((s, [, a]) => s + a, 0);
     const grandTotal = businessTotal + unclaimedTotal + personalTotal;
 
@@ -2293,30 +2309,43 @@ const deleteOtherIncomeSource = (id) => {
           </div>
         </div>
 
-        {/* ACTION BUTTON */}
-        {conditionalEntries.length > 0 && (
-          <div className="spending-action-wrap">
-            <button
-              className="spending-action-btn"
-              type="button"
-              onClick={() => {
-                const match = financialYearTransactions.find(
-                  t => t.type !== "income" &&
-                       getCategoryAllowability(t.category) === "conditional" &&
-                       t.hmrcStatus !== "overridden" &&
-                       t.hmrcStatus !== "personal" &&
-                       t.hmrcStatus !== "recategorised"
-                );
-                if (match) setHmrcFlagTransaction(match);
-              }}
-            >
-              <span>⚡</span>
-              <span>
-                Review {conditionalEntries.length} unclaimed {conditionalEntries.length === 1 ? "item" : "items"} — could save you {formatCurrency(unclaimedTotal * 0.20)} in tax
-              </span>
-            </button>
-          </div>
-        )}
+{/* ACTION BUTTON */}
+{conditionalEntries.length > 0 && (() => {
+  const unreviewedCount = financialYearTransactions.filter(
+    t => t.type !== "income" &&
+         getCategoryAllowability(t.category) === "conditional" &&
+         t.hmrcStatus !== "overridden" &&
+         t.hmrcStatus !== "personal" &&
+         t.hmrcStatus !== "recategorised"
+  ).length;
+
+  if (unreviewedCount === 0) return null;
+
+  return (
+    <div className="spending-action-wrap">
+      <button
+        className="spending-action-btn"
+        type="button"
+        onClick={() => {
+          const match = financialYearTransactions.find(
+            t => t.type !== "income" &&
+                 getCategoryAllowability(t.category) === "conditional" &&
+                 t.hmrcStatus !== "overridden" &&
+                 t.hmrcStatus !== "personal" &&
+                 t.hmrcStatus !== "recategorised"
+          );
+          if (match) setHmrcFlagTransaction(match);
+        }}
+      >
+        <span>⚡</span>
+        <span>
+          Review {unreviewedCount} unclaimed {unreviewedCount === 1 ? "item" : "items"} — could save you up to {formatCurrency(unclaimedTotal * 0.20)} in tax
+        </span>
+      </button>
+    </div>
+  );
+})()}
+
 
         {/* COLOUR KEY */}
         <div className="spending-key">

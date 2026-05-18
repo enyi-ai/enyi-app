@@ -1122,7 +1122,9 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }
   gap: 12px;
   padding: 22px 22px 16px;
   border-bottom: 1px solid #f1f5f9;
+  position: relative;
 }
+
 
 .review-modal-icon {
   font-size: 24px;
@@ -1147,6 +1149,9 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }
 }
 
 .review-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
   border: none;
   background: #f1f5f9;
   color: #6b7280;
@@ -1160,11 +1165,11 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
 .review-modal-close:hover { background: #e2e8f0; color: #09111f; }
+
 
 .review-modal-note {
   margin: 14px 22px 0;
