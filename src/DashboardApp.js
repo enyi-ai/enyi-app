@@ -2190,7 +2190,8 @@ const deleteOtherIncomeSource = (id) => {
         </section>
 
 
-        <div id="enyi-ai" className="fin-card"></div>
+<div id="enyi-ai"></div>
+
 <AIChatPanel
   selectedFinancialYear={selectedFinancialYear}
   transactions={transactions}

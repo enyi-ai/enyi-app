@@ -384,24 +384,27 @@ function AIChatPanel({ selectedFinancialYear, transactions, taxRegion }) {
       </div>
 
       {/* INPUT */}
-      <div className="ai-chat-input-row">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about your finances..."
-          className="ai-chat-input"
-          onKeyDown={(e) => { if (e.key === "Enter") sendMessage(input); }}
-        />
-        <button
-          type="button"
-          className="ai-send-button"
-          onClick={() => sendMessage(input)}
-          disabled={loading}
-        >
-          {loading ? "Thinking..." : "Send"}
-        </button>
-      </div>
+<div className="ai-chat-input-row">
+  <div className="ai-input-wrap">
+    <input
+      type="text"
+      value={input}
+      onChange={(e) => setInput(e.target.value)}
+      placeholder="Ask about your finances..."
+      className="ai-chat-input"
+      onKeyDown={(e) => { if (e.key === "Enter") sendMessage(input); }}
+    />
+    <button
+      type="button"
+      className="ai-send-button"
+      onClick={() => sendMessage(input)}
+      disabled={loading}
+    >
+      {loading ? "..." : "Send"}
+    </button>
+  </div>
+</div>
+
 
     </section>
   );
