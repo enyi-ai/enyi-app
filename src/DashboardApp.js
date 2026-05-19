@@ -47,6 +47,7 @@ function getCurrentFinancialYear() {
 
 function App() {
   const [input, setInput] = useState("");
+  const [amountInput, setAmountInput] = useState("");
   const [slicePopup, setSlicePopup] = useState(null);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState(getCurrentFinancialYear());
   const [expandedMonths, setExpandedMonths] = useState({});
@@ -205,10 +206,6 @@ useEffect(() => {
     }).format(Number(value) || 0);
   };
 
-  const extractAmountFromText = (text) => {
-    const match = text.match(/(\d+(\.\d+)?)/);
-    return match ? match[1] : "0";
-  };
 
   const showTemporaryReceiptSuccess = (message) => {
     setReceiptSuccessMessage(message);
@@ -430,73 +427,33 @@ const toggleDrawer = (drawer) => {
 };
 
 
-  const addTransaction = async () => {
-    setStatusMessage("");
-    setTransactionSuccessMessage("");
-    if (!input.trim()) { setStatusMessage("Please enter a transaction."); return; }
+const addTransaction = async () => {
+  setStatusMessage("");
+  setTransactionSuccessMessage("");
 
-    try {
-      setStatusMessage("Enyi is categorising your transaction. sit tight");
+  if (!input.trim()) {
+    setStatusMessage("Please enter a description.");
+    return;
+  }
 
-      if (transactionType === "income") {
-        const cleanAmount = extractAmountFromText(input);
-        const newTransaction = {
-          id: Date.now(),
-          text: input,
-          category: "Income",
-          amount: cleanAmount,
-          date: new Date(transactionDate).toISOString(),
-          type: "income"
-        };
-        if (!currentUser) return;
-        const firestoreTransaction = { ...newTransaction, createdAt: serverTimestamp() };
-        const docRef = await addDoc(
-          collection(db, "users", currentUser.uid, "transactions"),
-          firestoreTransaction
-        );
-        setTransactions((prev) => [{ id: docRef.id, ...newTransaction }, ...prev]);
-        setInput("");
-        setStatusMessage("");
-        setTransactionDate(new Date().toISOString().split("T")[0]);
-        setTransactionSuccessMessage(`Income added (${formatCurrency(cleanAmount)})`);
-        setTimeout(() => setTransactionSuccessMessage(""), 2500);
-        return;
-      }
+  const parsedAmount = parseFloat(amountInput);
+  if (!parsedAmount || parsedAmount <= 0) {
+    setStatusMessage("Please enter a valid amount.");
+    return;
+  }
 
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/api/categorise-expense`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: input })
-        }
-      );
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not categorise expense.");
+  try {
+    setStatusMessage("Enyi is categorising your transaction. sit tight");
 
-  const finalCategory = normalizeCategory(data.category, input);
-const allowability = data.allowability || getCategoryAllowability(finalCategory);
-const autoHmrcStatus =
-  allowability === "never" ? "personal" :
-  allowability === "always" ? "overridden" :
-  null;
-
-const autoHmrcReason =
-  allowability === "always"
-    ? "Auto-classified as business expense by Enyi"
-    : undefined;
-
-const newTransaction = {
-  id: Date.now(),
-  text: input,
-  category: finalCategory,
-  amount: Number(data.amount) || 0,
-  date: new Date(transactionDate).toISOString(),
-  type: "expense",
-  ...(autoHmrcStatus && { hmrcStatus: autoHmrcStatus }),
-  ...(autoHmrcReason && { hmrcOverrideReason: autoHmrcReason }),
-};
-
+    if (transactionType === "income") {
+      const newTransaction = {
+        id: Date.now(),
+        text: input,
+        category: "Income",
+        amount: parsedAmount,
+        date: new Date(transactionDate).toISOString(),
+        type: "income"
+      };
       if (!currentUser) return;
       const firestoreTransaction = { ...newTransaction, createdAt: serverTimestamp() };
       const docRef = await addDoc(
@@ -505,19 +462,71 @@ const newTransaction = {
       );
       setTransactions((prev) => [{ id: docRef.id, ...newTransaction }, ...prev]);
       setInput("");
+      setAmountInput("");
       setStatusMessage("");
       setTransactionDate(new Date().toISOString().split("T")[0]);
-      setTransactionSuccessMessage(
-        `Expense added (${finalCategory}: ${formatCurrency(Number(data.amount) || 0)})`
-      );
+      setTransactionSuccessMessage(`Income added (${formatCurrency(parsedAmount)})`);
       setTimeout(() => setTransactionSuccessMessage(""), 2500);
-
-    } catch (error) {
-      console.error(error);
-      setTransactionSuccessMessage("");
-      setStatusMessage(error.message || "Something went wrong.");
+      return;
     }
-  };
+
+    const response = await fetch(
+      `${process.env.REACT_APP_API_BASE_URL}/api/categorise-expense`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: input })
+      }
+    );
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not categorise expense.");
+
+    const finalCategory = normalizeCategory(data.category, input);
+    const allowability = data.allowability || getCategoryAllowability(finalCategory);
+    const autoHmrcStatus =
+      allowability === "never" ? "personal" :
+      allowability === "always" ? "overridden" :
+      null;
+
+    const autoHmrcReason =
+      allowability === "always"
+        ? "Auto-classified as business expense by Enyi"
+        : undefined;
+
+    const newTransaction = {
+      id: Date.now(),
+      text: input,
+      category: finalCategory,
+      amount: parsedAmount,
+      date: new Date(transactionDate).toISOString(),
+      type: "expense",
+      ...(autoHmrcStatus && { hmrcStatus: autoHmrcStatus }),
+      ...(autoHmrcReason && { hmrcOverrideReason: autoHmrcReason }),
+    };
+
+    if (!currentUser) return;
+    const firestoreTransaction = { ...newTransaction, createdAt: serverTimestamp() };
+    const docRef = await addDoc(
+      collection(db, "users", currentUser.uid, "transactions"),
+      firestoreTransaction
+    );
+    setTransactions((prev) => [{ id: docRef.id, ...newTransaction }, ...prev]);
+    setInput("");
+    setAmountInput("");
+    setStatusMessage("");
+    setTransactionDate(new Date().toISOString().split("T")[0]);
+    setTransactionSuccessMessage(
+      `Expense added (${finalCategory}: ${formatCurrency(parsedAmount)})`
+    );
+    setTimeout(() => setTransactionSuccessMessage(""), 2500);
+
+  } catch (error) {
+    console.error(error);
+    setTransactionSuccessMessage("");
+    setStatusMessage(error.message || "Something went wrong.");
+  }
+};
+
 
   const resizeImage = (file, maxWidth = 1400, quality = 0.85) => {
     return new Promise((resolve, reject) => {
@@ -1444,61 +1453,76 @@ const deleteOtherIncomeSource = (id) => {
 <section className="top-grid">
 
   {/* ── ADD TRANSACTION ── */}
-  <div id="add-transaction" className="fin-card action-card">
-    <div className="action-card-header">
-      <div className="action-card-icon-wrap">
-        <span className="action-card-icon">＋</span>
-      </div>
-      <div>
-        <h2 className="action-card-title">Add Transaction</h2>
-        <p className="action-card-sub">Log income or expenses instantly</p>
-      </div>
+<div id="add-transaction" className="fin-card action-card">
+  <div className="action-card-header">
+    <div className="action-card-icon-wrap">
+      <span className="action-card-icon">＋</span>
     </div>
-
-    <div className="action-type-toggle">
-      <button
-        className={`toggle-btn ${transactionType === "expense" ? "toggle-active" : ""}`}
-        onClick={() => setTransactionType("expense")}
-        type="button"
-      >
-        Expense
-      </button>
-      <button
-        className={`toggle-btn ${transactionType === "income" ? "toggle-active" : ""}`}
-        onClick={() => setTransactionType("income")}
-        type="button"
-      >
-        Income
-      </button>
+    <div>
+      <h2 className="action-card-title">Add Transaction</h2>
+      <p className="action-card-sub">Log income or expenses instantly</p>
     </div>
-
-    <input
-      type="text"
-      placeholder={transactionType === "income"
-        ? "e.g. Client fee £350"
-        : "e.g. Uber £25"}
-      value={input}
-      onChange={(e) => setInput(e.target.value)}
-      onKeyDown={(e) => e.key === "Enter" && addTransaction()}
-      className="fin-input action-input"
-    />
-
-    <input
-      type="date"
-      value={transactionDate}
-      onChange={(e) => setTransactionDate(e.target.value)}
-      className="fin-input"
-    />
-
-    <button onClick={addTransaction} className="primary-button action-submit-btn">
-      Add {transactionType === "income" ? "Income" : "Expense"}
-    </button>
-
-    {statusMessage && <p className="status-text">{statusMessage}</p>}
-    {transactionSuccessMessage && (
-      <p className="success-text">{transactionSuccessMessage}</p>
-    )}
   </div>
+
+  <div className="action-type-toggle">
+    <button
+      className={`toggle-btn ${transactionType === "expense" ? "toggle-active" : ""}`}
+      onClick={() => setTransactionType("expense")}
+      type="button"
+    >
+      Expense
+    </button>
+    <button
+      className={`toggle-btn ${transactionType === "income" ? "toggle-active" : ""}`}
+      onClick={() => setTransactionType("income")}
+      type="button"
+    >
+      Income
+    </button>
+  </div>
+
+  <input
+    type="text"
+    placeholder={transactionType === "income" ? "e.g. Client fee" : "e.g. Uber"}
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    onKeyDown={(e) => e.key === "Enter" && addTransaction()}
+    className="fin-input action-input"
+  />
+
+  <input
+    type="number"
+    inputMode="decimal"
+    step="0.01"
+    min="0"
+    placeholder="Amount (£)"
+    value={amountInput}
+    onChange={(e) => setAmountInput(e.target.value)}
+    onKeyDown={(e) => e.key === "Enter" && addTransaction()}
+    className="fin-input action-input"
+  />
+
+  <input
+    type="date"
+    value={transactionDate}
+    onChange={(e) => setTransactionDate(e.target.value)}
+    className="fin-input"
+  />
+
+  <button onClick={addTransaction} className="primary-button action-submit-btn">
+    Add {transactionType === "income" ? "Income" : "Expense"}
+  </button>
+
+  {statusMessage && <p className="status-text">{statusMessage}</p>}
+  {transactionSuccessMessage && (
+    <p className="success-text">{transactionSuccessMessage}</p>
+  )}
+
+  <p className="action-card-footnote">
+    Manual entry for now. Bank sync coming soon — connect your account and Enyi will import and categorise transactions automatically.
+  </p>
+</div>
+
 
   {/* ── RECEIPTS ── */}
   <div id="receipts" className="fin-card receipt-card">

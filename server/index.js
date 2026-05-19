@@ -304,10 +304,10 @@ RESPONSE FORMAT:
 // ── CATEGORISE EXPENSE ────────────────────────────────────
 app.post("/api/categorise-expense", async (req, res) => {
   try {
-    const { text } = req.body;
+    const { description } = req.body;
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({ error: "Expense text is required." });
+    if (!description || !description.trim()) {
+      return res.status(400).json({ error: "Expense description is required." });
     }
 
     const response = await openai.responses.create({
@@ -320,7 +320,6 @@ app.post("/api/categorise-expense", async (req, res) => {
 
 Given an expense description, return a JSON object with exactly these fields:
 - category: the HMRC expense category
-- amount: the numeric amount extracted from the text (0 if not found)
 - allowability: one of "always", "conditional", or "never"
 - confidence: one of "high", "medium", or "low"
 - hmrcNote: brief plain English note explaining the allowability
@@ -334,20 +333,21 @@ CATEGORIES — use exactly these values:
 Travel, Fuel, Office, Phone, Software, Marketing, Professional fees, Training, Utilities, Insurance, Stock, Wages, Bank charges, Rent, Food, Clothing, Groceries, Mortgage, Personal, Entertainment, Misc
 
 Return ONLY valid JSON. No text outside the JSON.`
-
         },
         {
           role: "user",
           content: `
-Categorise this expense and extract the amount.
+Categorise this expense description.
 
 User input:
-"${text}"
+"${description}"
 
 Return EXACTLY in this JSON format:
 {
   "category": "Travel",
-  "amount": 60
+  "allowability": "conditional",
+  "confidence": "high",
+  "hmrcNote": "Travel for business meetings is allowable"
 }
 `
         }
@@ -363,12 +363,11 @@ Return EXACTLY in this JSON format:
     const parsed = JSON.parse(cleaned);
 
     return res.json({
-  category: parsed.category,
-  amount: parsed.amount,
-  allowability: parsed.allowability || "conditional",
-  confidence: parsed.confidence || "medium",
-  hmrcNote: parsed.hmrcNote || ""
-});
+      category: parsed.category,
+      allowability: parsed.allowability || "conditional",
+      confidence: parsed.confidence || "medium",
+      hmrcNote: parsed.hmrcNote || ""
+    });
 
   } catch (error) {
     console.error("Categorise expense error:", error);
@@ -377,6 +376,7 @@ Return EXACTLY in this JSON format:
     });
   }
 });
+
 
 app.listen(4000, () => {
   console.log("Server running on port 4000");
