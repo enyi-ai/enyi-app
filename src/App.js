@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, getRedirectResult } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   BrowserRouter,
   Routes,
@@ -25,8 +25,6 @@ function AppShell() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [redirectChecking, setRedirectChecking] = useState(true);
-
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,23 +32,13 @@ function AppShell() {
 
 
 useEffect(() => {
-  // First: check if we're coming back from a Google redirect sign-in.
-  // On mobile, this resolves the user before onAuthStateChanged fires.
-  getRedirectResult(auth)
-    .catch((error) => {
-      console.error("Redirect sign-in error:", error);
-    })
-    .finally(() => {
-      setRedirectChecking(false);
-    });
-
   const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
     setUser(firebaseUser || null);
+    setProfileLoading(false);
   });
 
   return () => unsubscribe();
 }, []);
-
 
   useEffect(() => {
     if (
@@ -108,10 +96,9 @@ useEffect(() => {
 
 }, [user, onboardingComplete, profileLoading, location.pathname, navigate]);
 
- if (redirectChecking || user === undefined || profileLoading) {
+ if (user === undefined || profileLoading) {
   return <div style={{ padding: "40px" }}>Loading...</div>;
 }
-
 
   if (user && onboardingComplete) {
   return <DashboardApp />;
