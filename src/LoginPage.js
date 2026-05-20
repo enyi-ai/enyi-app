@@ -3,8 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   sendPasswordResetEmail
 } from "firebase/auth";
+
 import { auth, googleProvider } from "./firebase";
 import "./Auth.css";
 import logoIcon from "./assets/enyi-icon.png";
@@ -42,17 +44,26 @@ function LoginPage() {
     setStatusMessage(error.message || "Could not send reset email.");
   }
 };
-  const handleGoogleLogin = async () => {
+const handleGoogleLogin = async () => {
   setStatusMessage("");
 
+  // Use redirect on mobile (more reliable), popup on desktop
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   try {
-    await signInWithPopup(auth, googleProvider);
-    // remove navigate("/")
-    // Firebase auth state listener in App.js will route automatically
+    if (isMobile) {
+      await signInWithRedirect(auth, googleProvider);
+      // Page will redirect to Google, then return.
+      // AppShell's getRedirectResult handles the user state on return.
+    } else {
+      await signInWithPopup(auth, googleProvider);
+      // Firebase auth state listener in App.js will route automatically
+    }
   } catch (error) {
     setStatusMessage(error.message || "Google sign-in failed.");
   }
 };
+
 
 return (
   <div className="auth-panel">
