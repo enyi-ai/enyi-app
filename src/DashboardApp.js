@@ -2081,24 +2081,77 @@ const deleteOtherIncomeSource = (id) => {
     <div className="brand-chip">Live</div>
   </div>
 
-  {/* TAX SAVING HERO */}
-  {allowableExpenses > 0 && (
-    <div className="spending-hero-stat">
+{/* ── TAX SAVING HERO — ACCURATE CALCULATION ── */}
+{(() => {
+  // Current situation — only confirmed business expenses
+  const currentSummary = calculateTaxSummary(
+    totalIncome - allowableExpenses,
+    otherIncomeTotal,
+    taxRegion
+  );
+
+  // Potential situation — if all unclaimed also confirmed
+  const unclaimedAmount = financialYearTransactions
+    .filter(t =>
+      t.type !== "income" &&
+      getCategoryAllowability(t.category) === "conditional" &&
+      t.hmrcStatus !== "overridden" &&
+      t.hmrcStatus !== "personal" &&
+      t.hmrcStatus !== "recategorised"
+    )
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+  const potentialSummary = calculateTaxSummary(
+    totalIncome - allowableExpenses - unclaimedAmount,
+    otherIncomeTotal,
+    taxRegion
+  );
+
+  const currentTax = currentSummary.estimatedTotalTax;
+  const potentialTax = potentialSummary.estimatedTotalTax;
+  const taxSaving = Math.max(currentTax - potentialTax, 0);
+
+  // No unclaimed items — show confirmed saving
+  if (unclaimedAmount === 0 || taxSaving === 0) {
+    return (
+      <div className="spending-hero-stat spending-hero-confirmed">
+        <div className="spending-hero-left">
+          <span className="spending-hero-icon">✅</span>
+          <div>
+            <div className="spending-hero-label">Tax reduced by claiming business expenses</div>
+            <div className="spending-hero-sub">
+              {formatCurrency(allowableExpenses)} in allowable expenses this year
+            </div>
+          </div>
+        </div>
+        <div className="spending-hero-value" style={{ color: "#065f46" }}>
+          {formatCurrency(currentTax)}
+          <span className="spending-hero-rate">tax bill</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Has unclaimed items — show potential saving
+  return (
+    <div className="spending-hero-stat spending-hero-opportunity">
       <div className="spending-hero-left">
-        <span className="spending-hero-icon">🎯</span>
+        <span className="spending-hero-icon">⚡</span>
         <div>
-          <div className="spending-hero-label">Estimated tax saved this year</div>
+          <div className="spending-hero-label">You could reduce your tax bill by</div>
           <div className="spending-hero-sub">
-            Based on {formatCurrency(allowableExpenses)} in business expenses
+            Confirm {formatCurrency(unclaimedAmount)} in unclaimed expenses below
           </div>
         </div>
       </div>
-      <div className="spending-hero-value">
-        {formatCurrency(allowableExpenses * 0.20)}
-        <span className="spending-hero-rate">at 20%</span>
+      <div className="spending-hero-value" style={{ color: "#92400e" }}>
+        {formatCurrency(taxSaving)}
+        <span className="spending-hero-rate">potential saving</span>
       </div>
     </div>
-  )}
+  );
+})()}
+
 
   {Object.entries(categoryTotals).length === 0 ? (
     <div className="spending-empty">
