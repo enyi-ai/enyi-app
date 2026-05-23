@@ -52,6 +52,8 @@ function App() {
   const [selectedFinancialYear, setSelectedFinancialYear] = useState(getCurrentFinancialYear());
   const [expandedMonths, setExpandedMonths] = useState({});
   const [openMenuId, setOpenMenuId] = useState(null);
+const [duplicateWarning, setDuplicateWarning] = useState(null);
+const [pendingTransaction, setPendingTransaction] = useState(null);
 
   // eslint-disable-next-line no-unused-vars
 const [otherIncomeType, setOtherIncomeType] = useState("salary");
@@ -119,6 +121,26 @@ const [regionLoaded, setRegionLoaded] = useState(false);
     date: "",
     type: "expense"
   });
+const findDuplicate = (amount, text, date, type) => {
+  const newDate = new Date(date);
+  const newAmount = parseFloat(amount);
+  const newText = (text || "").toLowerCase().trim();
+
+  return transactions.find((t) => {
+    if (t.type !== type) return false;
+    const existingAmount = parseFloat(t.amount);
+    if (Math.abs(existingAmount - newAmount) > 0.01) return false;
+    const existingDate = new Date(t.date);
+    const daysDiff = Math.abs((newDate - existingDate) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 7) return false;
+    const existingText = (t.text || "").toLowerCase().trim();
+    const textMatch =
+      existingText === newText ||
+      existingText.includes(newText) ||
+      newText.includes(existingText);
+    return textMatch;
+  });
+};
 
   const scrollToSection = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -426,6 +448,29 @@ const toggleDrawer = (drawer) => {
   setHmrcFlagTransaction(null);
 };
 
+const saveTransaction = async ({ text, amount, date, type, category }) => {
+  if (!currentUser) return;
+  const newTransaction = {
+    id: Date.now(), text, category, amount,
+    date: new Date(date).toISOString(), type
+  };
+  const docRef = await addDoc(
+    collection(db, "users", currentUser.uid, "transactions"),
+    { ...newTransaction, createdAt: serverTimestamp() }
+  );
+  setTransactions((prev) => [{ id: docRef.id, ...newTransaction }, ...prev]);
+  setInput("");
+  setStatusMessage("");
+  setTransactionDate(new Date().toISOString().split("T")[0]);
+  setTransactionSuccessMessage(
+    `${type === "income" ? "Income" : "Expense"} added (${category}: ${formatCurrency(amount)})`
+  );
+  setTimeout(() => setTransactionSuccessMessage(""), 2500);
+  if (type !== "income" && shouldFlag(category)) {
+    setTimeout(() => setHmrcFlagTransaction({ id: docRef.id, text, amount, category }), 800);
+  }
+};
+
 
 const addTransaction = async () => {
   setStatusMessage("");
@@ -443,7 +488,40 @@ const addTransaction = async () => {
   }
 
   try {
-    setStatusMessage("Enyi is categorising your transaction. sit tight");
+    setStatusMessage("Enyi is categorising your transaction");
+// ── DUPLICATE CHECK ——
+if (transactionType === "income") {
+  const duplicate = findDuplicate(parsedAmount, input, transactionDate, "income");
+  if (duplicate) {
+    setDuplicateWarning(duplicate);
+    setPendingTransaction({
+      text: input,
+      amount: parsedAmount,
+      date: transactionDate,
+      type: "income",
+      category: "Income"
+    });
+    setStatusMessage("");
+    return;
+  }
+}
+// ── DUPLICATE CHECK (EXPENSE) ──
+if (transactionType === "expense") {
+  const duplicate = findDuplicate(parsedAmount, input, transactionDate, "expense");
+  if (duplicate) {
+    setDuplicateWarning(duplicate);
+    setPendingTransaction({
+      text: input,
+      amount: parsedAmount,
+      date: transactionDate,
+      type: "expense",
+      category: "expense"
+    });
+    setStatusMessage("");
+    return;
+  }
+}
+
 
     if (transactionType === "income") {
       const newTransaction = {
@@ -482,6 +560,15 @@ const addTransaction = async () => {
     if (!response.ok) throw new Error(data.error || "Could not categorise expense.");
 
     const finalCategory = normalizeCategory(data.category, input);
+    const amount = Number(data.amount) || 0;
+const expDuplicate = findDuplicate(amount, input, transactionDate, "expense");
+if (expDuplicate) {
+  setDuplicateWarning(expDuplicate);
+  setPendingTransaction({ text: input, amount, date: transactionDate, type: "expense", category: finalCategory });
+  setStatusMessage("");
+  return;
+}
+
     const allowability = data.allowability || getCategoryAllowability(finalCategory);
     const autoHmrcStatus =
       allowability === "never" ? "personal" :
@@ -592,6 +679,25 @@ const addTransaction = async () => {
   const confirmReceiptSave = async () => {
     if (!receiptPreview) return;
     const safeDate = convertUkDateToIso(receiptPreview.date);
+    // ── DUPLICATE CHECK ──
+const receiptDuplicate = findDuplicate(
+  receiptPreview.amount,
+  receiptPreview.merchant,
+  safeDate,
+  "expense"
+);
+if (receiptDuplicate) {
+  setDuplicateWarning(receiptDuplicate);
+  setPendingTransaction({
+    text: receiptPreview.merchant,
+    amount: receiptPreview.amount,
+    date: safeDate,
+    type: "expense",
+    category: receiptPreview.category
+  });
+  return;
+}
+
  const receiptAllowability = getCategoryAllowability(receiptPreview.category);
 const receiptHmrcStatus =
   receiptAllowability === "never" ? "personal" :
@@ -2822,6 +2928,58 @@ onSaveOtherIncome={handleSaveOtherIncome}
 />
 
 )}
+{/* DUPLICATE WARNING MODAL */}
+{duplicateWarning && pendingTransaction && (
+  <div className="modal-overlay">
+    <div className="modal-box">
+      <div style={{ fontSize: "28px", marginBottom: "8px" }}>⚠️</div>
+      <h2 style={{ marginBottom: "8px" }}>Possible Duplicate</h2>
+      <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "14px", marginBottom: "20px" }}>
+        Enyi spotted a similar transaction already in your records.
+      </p>
+
+      <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: "12px", padding: "14px", marginBottom: "12px", textAlign: "left" }}>
+        <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginBottom: "6px" }}>EXISTING TRANSACTION</p>
+        <p style={{ fontWeight: 600 }}>{duplicateWarning.text}</p>
+        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)" }}>
+          {formatCurrency(duplicateWarning.amount)} · {new Date(duplicateWarning.date).toLocaleDateString()} · {duplicateWarning.category}
+        </p>
+      </div>
+
+      <div style={{ background: "rgba(255,193,7,0.08)", border: "1px solid rgba(255,193,7,0.2)", borderRadius: "12px", padding: "14px", marginBottom: "24px", textAlign: "left" }}>
+        <p style={{ fontSize: "11px", color: "rgba(255,193,7,0.7)", marginBottom: "6px" }}>NEW TRANSACTION</p>
+        <p style={{ fontWeight: 600 }}>{pendingTransaction.text}</p>
+        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.5)" }}>
+          {formatCurrency(pendingTransaction.amount)} · {new Date(pendingTransaction.date).toLocaleDateString()} · {pendingTransaction.category}
+        </p>
+      </div>
+
+      <div className="button-group">
+        <button
+          className="primary-button"
+          onClick={async () => {
+            const pt = pendingTransaction;
+            setDuplicateWarning(null);
+            setPendingTransaction(null);
+            await saveTransaction(pt);
+          }}
+        >
+          Save Anyway
+        </button>
+        <button
+          className="secondary-button"
+          onClick={() => {
+            setDuplicateWarning(null);
+            setPendingTransaction(null);
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       </div>
     </div>
