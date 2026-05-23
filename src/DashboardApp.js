@@ -876,6 +876,7 @@ const monthlyProfit = monthlyIncome - monthlyExpenses;
 // ── 3 MONTH TREND DATA ──
 const getMonthData = (monthsAgo) => {
   const d = new Date();
+  d.setDate(1);
   d.setMonth(d.getMonth() - monthsAgo);
   const m = d.getMonth();
   const y = d.getFullYear();
@@ -892,6 +893,7 @@ const getMonthData = (monthsAgo) => {
   const label = d.toLocaleString("en-GB", { month: "short" });
   return { income, expenses, label };
 };
+
 
 const trendMonth0 = getMonthData(2); // 2 months ago
 const trendMonth1 = getMonthData(1); // last month
@@ -2289,26 +2291,8 @@ const deleteOtherIncomeSource = (id) => {
   const potentialTax = potentialSummary.estimatedTotalTax;
   const taxSaving = Math.max(currentTax - potentialTax, 0);
 
-  // No unclaimed items — show confirmed saving
-  if (unclaimedAmount === 0 || taxSaving === 0) {
-    return (
-      <div className="spending-hero-stat spending-hero-confirmed">
-        <div className="spending-hero-left">
-          <span className="spending-hero-icon">✅</span>
-          <div>
-            <div className="spending-hero-label">Tax reduced by claiming business expenses</div>
-            <div className="spending-hero-sub">
-              {formatCurrency(allowableExpenses)} in allowable expenses this year
-            </div>
-          </div>
-        </div>
-        <div className="spending-hero-value" style={{ color: "#065f46" }}>
-          {formatCurrency(currentTax)}
-          <span className="spending-hero-rate">tax bill</span>
-        </div>
-      </div>
-    );
-  }
+if (unclaimedAmount === 0 || taxSaving === 0) return null;
+
 
 
 })()}
