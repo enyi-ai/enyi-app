@@ -489,7 +489,7 @@ const addTransaction = async () => {
 
   try {
     setStatusMessage("Enyi is categorising your transaction");
-// ── DUPLICATE CHECK ——
+// ── DUPLICATE CHECK —— (INCOME)
 if (transactionType === "income") {
   const duplicate = findDuplicate(parsedAmount, input, transactionDate, "income");
   if (duplicate) {
@@ -872,6 +872,78 @@ const otherIncomeTotal = otherIncomeSources.reduce(
   .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
 const monthlyProfit = monthlyIncome - monthlyExpenses;
+
+// ── 3 MONTH TREND DATA ──
+const getMonthData = (monthsAgo) => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - monthsAgo);
+  const m = d.getMonth();
+  const y = d.getFullYear();
+  const monthTxs = transactions.filter(t => {
+    const td = new Date(t.date);
+    return td.getMonth() === m && td.getFullYear() === y;
+  });
+  const income = monthTxs
+    .filter(t => t.type === "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  const expenses = monthTxs
+    .filter(t => t.type !== "income")
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  const label = d.toLocaleString("en-GB", { month: "short" });
+  return { income, expenses, label };
+};
+
+const trendMonth0 = getMonthData(2); // 2 months ago
+const trendMonth1 = getMonthData(1); // last month
+const trendMonth2 = getMonthData(0); // this month
+
+const trendMax = Math.max(
+  trendMonth0.income, trendMonth0.expenses,
+  trendMonth1.income, trendMonth1.expenses,
+  trendMonth2.income, trendMonth2.expenses,
+  1
+);
+
+const getTrendInsight = () => {
+  const incomeGrowth = trendMonth1.income > 0
+    ? (trendMonth2.income - trendMonth1.income) / trendMonth1.income : 0;
+  const expenseGrowth = trendMonth1.expenses > 0
+    ? (trendMonth2.expenses - trendMonth1.expenses) / trendMonth1.expenses : 0;
+  if (trendMonth2.expenses > trendMonth2.income) {
+    return {
+      state: "danger",
+      icon: "🚨",
+      text: "Spending more than you're earning this month",
+      sub: "Immediate action needed — check your largest expenses",
+      bg: "#fff5f5",
+      border: "#fecaca",
+      iconBg: "#fee2e2"
+    };
+  }
+  if (expenseGrowth > incomeGrowth) {
+    return {
+      state: "warning",
+      icon: "⚠️",
+      text: "Expenses rising faster than income",
+      sub: "Review your spending — profit is being squeezed",
+      bg: "#fffbeb",
+      border: "#fde68a",
+      iconBg: "#fef3c7"
+    };
+  }
+  return {
+    state: "good",
+    icon: "📈",
+    text: "Income growing faster than expenses",
+    sub: "Green bars outpacing red — you're on track",
+    bg: "#f0fdf4",
+    border: "#bbf7d0",
+    iconBg: "#dcfce7"
+  };
+};
+
+const trendInsight = getTrendInsight();
+
 
 // ── SNAPSHOT MONTH CALCULATIONS ──
 const snapshotMonthIndex = snapshotMonth.getMonth();
@@ -1625,7 +1697,7 @@ const deleteOtherIncomeSource = (id) => {
   )}
 
   <p className="action-card-footnote">
-    Manual entry for now. Bank sync coming soon — connect your account and Enyi will import and categorise transactions automatically.
+    Manual entry for now. Bank sync coming soon — when you connect your account, Enyi will import and categorise transactions automatically.
   </p>
 </div>
 
@@ -2238,24 +2310,7 @@ const deleteOtherIncomeSource = (id) => {
     );
   }
 
-  // Has unclaimed items — show potential saving
-  return (
-    <div className="spending-hero-stat spending-hero-opportunity">
-      <div className="spending-hero-left">
-        <span className="spending-hero-icon">⚡</span>
-        <div>
-          <div className="spending-hero-label">You could reduce your tax bill by</div>
-          <div className="spending-hero-sub">
-            Confirm {formatCurrency(unclaimedAmount)} in unclaimed expenses below
-          </div>
-        </div>
-      </div>
-      <div className="spending-hero-value" style={{ color: "#92400e" }}>
-        {formatCurrency(taxSaving)}
-        <span className="spending-hero-rate">potential saving</span>
-      </div>
-    </div>
-  );
+
 })()}
 
 
@@ -2407,6 +2462,71 @@ const deleteOtherIncomeSource = (id) => {
 
     return (
       <div>
+
+{/* ── 3 MONTH TREND CHART ── */}
+<div className="trend-section">
+  <div className="trend-header">
+    <div className="trend-title">3-Month Trend</div>
+    <div className="trend-sub">Total income vs total expenses</div>
+  </div>
+
+  <div className="trend-chart">
+    {[trendMonth0, trendMonth1, trendMonth2].map((month, i) => (
+      <div key={i} className={`trend-group ${i === 2 ? "trend-group-current" : ""}`}>
+        <div className="trend-pair">
+          <div className="trend-bar-wrap">
+            <span className="trend-bar-val" style={{ color: "#059669" }}>
+              {formatCurrency(month.income).replace(".00", "")}
+            </span>
+            <div
+              className="trend-bar trend-bar-income"
+              style={{ height: `${Math.max((month.income / trendMax) * 100, 2)}%` }}
+            />
+          </div>
+          <div className="trend-bar-wrap">
+            <span className="trend-bar-val" style={{ color: "#dc2626" }}>
+              {formatCurrency(month.expenses).replace(".00", "")}
+            </span>
+            <div
+              className="trend-bar trend-bar-expense"
+              style={{ height: `${Math.max((month.expenses / trendMax) * 100, 2)}%` }}
+            />
+          </div>
+        </div>
+        <span className="trend-month-label">
+          {month.label}{i === 2 ? " ●" : ""}
+        </span>
+      </div>
+    ))}
+  </div>
+
+  <div className="trend-legend">
+    <div className="trend-legend-item">
+      <div className="trend-legend-dot" style={{ background: "#10b981" }} />
+      Total income
+    </div>
+    <div className="trend-legend-item">
+      <div className="trend-legend-dot" style={{ background: "#ef4444" }} />
+      Total expenses
+    </div>
+  </div>
+
+  <div className="trend-insight" style={{
+    background: trendInsight.bg,
+    border: `1px solid ${trendInsight.border}`
+  }}>
+    <div className="trend-insight-icon" style={{ background: trendInsight.iconBg }}>
+      {trendInsight.icon}
+    </div>
+    <div>
+      <div className="trend-insight-text">{trendInsight.text}</div>
+      <div className="trend-insight-sub">{trendInsight.sub}</div>
+    </div>
+  </div>
+</div>
+
+{/* YOUR SPENDING SPLIT */}
+
 
         {/* YOUR SPENDING SPLIT */}
         <div className="spending-split-section">

@@ -1210,3 +1210,151 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }
   font-size: 20px;
   font-weight: 700;
 }
+
+/* ── 3 MONTH TREND ── */
+.trend-section {
+  padding: 20px 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.trend-header { margin-bottom: 16px; }
+.trend-title { font-size: 15px; font-weight: 900; color: #09111f; letter-spacing: -0.03em; }
+.trend-sub { font-size: 11px; color: #6b7280; font-weight: 500; margin-top: 2px; }
+
+.trend-chart {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+  height: 140px;
+  padding-bottom: 24px;
+  position: relative;
+  margin-bottom: 14px;
+  border-bottom: 1.5px solid #f1f5f9;
+}
+
+.trend-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.trend-pair {
+  display: flex;
+  gap: 5px;
+  align-items: flex-end;
+  height: calc(100% - 24px);
+  width: 100%;
+  justify-content: center;
+}
+
+.trend-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 4px;
+}
+
+.trend-bar-val {
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.trend-bar {
+  width: 22px;
+  border-radius: 6px 6px 0 0;
+  transition: height 0.4s ease;
+}
+
+.trend-bar-income {
+  background: linear-gradient(180deg, #34d399, #059669);
+  box-shadow: 0 -2px 8px rgba(16,185,129,0.2);
+}
+
+.trend-bar-expense {
+  background: linear-gradient(180deg, #f87171, #dc2626);
+  box-shadow: 0 -2px 8px rgba(239,68,68,0.15);
+}
+
+.trend-group-current .trend-bar-income {
+  background: linear-gradient(180deg, #10b981, #047857);
+  box-shadow: 0 -4px 12px rgba(16,185,129,0.35);
+}
+
+.trend-group-current .trend-bar-expense {
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
+  box-shadow: 0 -4px 12px rgba(239,68,68,0.3);
+}
+
+.trend-month-label {
+  position: absolute;
+  bottom: -20px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.trend-group-current .trend-month-label { color: #09111f; font-weight: 900; }
+
+.trend-legend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.trend-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.trend-legend-dot {
+  width: 9px; height: 9px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.trend-insight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.trend-insight-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.trend-insight-text {
+  font-size: 12px;
+  font-weight: 800;
+  color: #09111f;
+  margin-bottom: 2px;
+}
+
+.trend-insight-sub {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  line-height: 1.4;
+}
