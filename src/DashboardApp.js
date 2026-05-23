@@ -1535,6 +1535,7 @@ const deleteOtherIncomeSource = (id) => {
   After business expenses only
 </p>
 
+
   {goalProfit ? (
     <div className="hero-goal-block">
       <div className="hero-goal-track">
@@ -2250,10 +2251,9 @@ const deleteOtherIncomeSource = (id) => {
     <div className="spending-header-left">
       <div className="spending-header-icon">💼</div>
       <div>
-        <h2 className="spending-title">Where Your Money Works</h2>
-        <p className="spending-subtitle">
-          {selectedFinancialYear} · {Object.entries(categoryTotals).length} categories tracked
-        </p>
+<h2 className="spending-title">Follow Your Money</h2>
+<p className="spending-subtitle">See where every pound goes</p>
+
       </div>
     </div>
     <div className="brand-chip">Live</div>
@@ -2525,13 +2525,12 @@ const deleteOtherIncomeSource = (id) => {
   </div>
 </div>
 
-{/* YOUR SPENDING SPLIT */}
 
 
         {/* YOUR SPENDING SPLIT */}
         <div className="spending-split-section">
-          <div className="spending-split-title">Your spending split</div>
-          <div className="spending-split-sub">Tap a slice to explore</div>
+          <div className="spending-split-title">Your spending split for the year</div>
+          <div className="spending-split-sub">{selectedFinancialYear} · tap a slice to explore</div>
 
           <div className="spending-split-layout">
             <div className="spending-donut-wrap">

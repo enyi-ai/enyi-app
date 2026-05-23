@@ -240,7 +240,7 @@ img { display: block; max-width: 100%; }
 
 .section-head h2, .summary-top h2 {
   margin: 0;
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1;
   letter-spacing: -0.04em;
   font-weight: 900;
@@ -1358,3 +1358,4 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }
   font-weight: 500;
   line-height: 1.4;
 }
+
