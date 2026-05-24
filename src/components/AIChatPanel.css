@@ -65,15 +65,16 @@
 
 .ai-chat-title {
   margin: 0;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 900;
   letter-spacing: -0.05em;
-  background: linear-gradient(135deg, #09111f 0%, #1a3a5c 100%);
+  background: linear-gradient(135deg, #09111f 0%, #2fe1c2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   line-height: 1;
 }
+
 
 .ai-chat-subtitle {
   margin: 0;

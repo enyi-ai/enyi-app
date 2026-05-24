@@ -586,7 +586,7 @@ img { display: block; max-width: 100%; }
    YOUR NUMBERS DRAWERS
    ============================================ */
 
-.your-numbers-card { margin-bottom: 20px; }
+.your-numbers-card { margin-bottom: 28px; }
 .yn-drawer { border: 1px solid #e8edf5; border-radius: 18px; overflow: hidden; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(9,17,31,0.04); }
 .yn-drawer:last-child { margin-bottom: 0; }
 .yn-drawer-header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border: none; background: #fafbfd; cursor: pointer; font-family: inherit; transition: background 0.15s ease; text-align: left; }

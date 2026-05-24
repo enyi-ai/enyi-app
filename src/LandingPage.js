@@ -18,7 +18,7 @@ function LandingPage({ onGetStarted }) {
               <div className="brand-text">
                 <h1 className="brand-name">Enyi</h1>
                 <p className="brand-tagline">
-                  Your AI finance partner
+                  Your smartest business partner
                 </p>
               </div>
             </div>
@@ -31,8 +31,7 @@ function LandingPage({ onGetStarted }) {
           <h1>Run your business with financial intelligence.</h1>
 
           <p className="landing-subtitle">
-            Enyi helps UK businesses track income, manage expenses, stay tax
-            aware, and make better financial decisions with AI-powered guidance.
+            Enyi learns from your business finances to deliver personalised AI guidance — helping UK SMEs understand performance, anticipate tax obligations, and make smarter decisions with confidence..
           </p>
 
           <div className="landing-actions">
@@ -49,44 +48,42 @@ function LandingPage({ onGetStarted }) {
           </div>
 
           <div className="landing-points">
-            <div className="landing-point">Bookkeeping and receipts in one place</div>
-            <div className="landing-point">Tax-aware guidance for UK businesses</div>
-            <div className="landing-point">Built to become your AI finance coach</div>
+            <div className="landing-point">AI financial intelligence built around your business </div>
+            <div className="landing-point">Proactive UK tax and compliance</div>
+            <div className="landing-point">Personalised coaching that gets smarter as your business grows</div>
           </div>
         </div>
 
         <div className="landing-preview-card">
           <div className="landing-preview-label">
-            Your financial command centre
+            What Enyi Does
           </div>
 
           <div className="landing-preview-item">
-            <strong>Understand your numbers</strong>
+            <strong>Knows your financial position in real time</strong>
             <p>See income, expenses, profit and spending patterns clearly.</p>
           </div>
 
           <div className="landing-preview-item">
-            <strong>Stay tax aware</strong>
+            <strong>Warns you before HMRC becomes a problem</strong>
             <p>Estimate what to set aside and prepare for HMRC with confidence.</p>
           </div>
 
           <div className="landing-preview-item">
-            <strong>Make better decisions</strong>
+            <strong>Advises on pricing, spending and growth</strong>
             <p>Use your records to guide pricing, spending and planning.</p>
           </div>
 
           <div className="landing-preview-item">
-            <strong>Built for the future</strong>
-            <p>Enyi is growing into a personalised AI finance adviser for SMEs.</p>
+            <strong>Gets smarter the longer you use it</strong>
+            <p>The more you use Enyi, the more precisely it understands your business.</p>
           </div>
         </div>
       </section>
 
       <section className="vision-strip">
         <p>
-          Enyi is building towards personalised financial intelligence for every
-          UK small business — helping owners stay compliant, plan ahead and grow
-          with confidence.
+          Enyi is your AI CFO — the financial brain every small business deserves but could never afford.
         </p>
       </section>
 

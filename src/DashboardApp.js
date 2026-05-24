@@ -1489,7 +1489,7 @@ const deleteOtherIncomeSource = (id) => {
             </div>
             <div className="brand-text">
               <h1 className="brand-name">Enyi</h1>
-              <p className="brand-tagline">Your AI finance partner</p>
+              <p className="brand-tagline">Your smartest business partner</p>
             </div>
           </div>
           <div className="nav-menu-wrapper">
@@ -1519,9 +1519,9 @@ const deleteOtherIncomeSource = (id) => {
         <section className="hero-card">
           <div className="hero-grid">
             <div className="hero-left">
-              <h2 className="hero-title">Your money,<br />organised.</h2>
+              <h2 className="hero-title">Your business,<br />in focus.</h2>
               <p className="hero-subtitle">
-                Bookkeeping, tax clarity and personalised AI guidance for smarter business growth.
+                AI-powered financial intelligence that explains your performance, flags risks before they hit, and recommends your next best move..
               </p>
             </div>
             <div className="hero-right">
@@ -1614,8 +1614,8 @@ const deleteOtherIncomeSource = (id) => {
           <div className="insight-strip-left">
             <div className="insight-ai-badge">Enyi AI</div>
             <div className="insight-copy">
-              <h3>Business Insight</h3>
-              <p>Automated financial intelligence based on your recent activity</p>
+              <h3>Business Intelligence</h3>
+              <p>Your AI CFO has analysed your recent activity - here's what you need to know in real time</p>
             </div>
           </div>
           <button className="insight-expand-button" onClick={() => setShowInsight(!showInsight)}>
@@ -1631,7 +1631,16 @@ const deleteOtherIncomeSource = (id) => {
           </div>
         )}
 
+  <div id="enyi-ai"></div>
+
+<AIChatPanel
+  selectedFinancialYear={selectedFinancialYear}
+  transactions={transactions}
+  taxRegion={taxRegion}
+/>
+
 <section className="top-grid">
+
 
   {/* ── ADD TRANSACTION ── */}
 <div id="add-transaction" className="fin-card action-card">
@@ -2735,13 +2744,6 @@ if (unclaimedAmount === 0 || taxSaving === 0) return null;
         </section>
 
 
-<div id="enyi-ai"></div>
-
-<AIChatPanel
-  selectedFinancialYear={selectedFinancialYear}
-  transactions={transactions}
-  taxRegion={taxRegion}
-/>
 
 
         <section id="transaction-history" className="fin-card">

@@ -217,9 +217,10 @@ function AIChatPanel({ selectedFinancialYear, transactions, taxRegion }) {
     const monthName = now.toLocaleString("en-GB", { month: "long" });
     const regionLabel = getRegionLabel(region);
 
-    if (total === 0) {
-      return `Add your first transaction and I'll start coaching you on your finances. I'm set up for ${regionLabel} tax rates.`;
-    }
+  if (!transactions || transactions.length === 0) {
+  return `Add your first transaction and I'll start coaching you on your finances. I'm set up for ${regionLabel} tax rates.`;
+}
+
 
     if (thisMonthIncome === 0) {
       return `I can see ${total} transactions in ${selectedFinancialYear || "this year"}. No income recorded yet this month — want me to review your year so far? I'm using ${regionLabel} tax rates.`;
@@ -244,10 +245,11 @@ function AIChatPanel({ selectedFinancialYear, transactions, taxRegion }) {
   const messagesEndRef = useRef(null);
 
   // Re-generate opening message when region changes
-  useEffect(() => {
-    setMessages([{ role: "assistant", content: getOpeningMessage() }]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taxRegion]);
+useEffect(() => {
+  setMessages([{ role: "assistant", content: getOpeningMessage() }]);
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [taxRegion, transactions]);
+
 
   const clearChat = () => {
     setMessages([{ role: "assistant", content: getOpeningMessage() }]);
@@ -320,11 +322,11 @@ function AIChatPanel({ selectedFinancialYear, transactions, taxRegion }) {
       <div className="ai-chat-header">
         <div className="ai-chat-header-left">
           <div className="ai-chat-title-row">
-            <div className="ai-chat-badge">AI</div>
-            <h2 className="ai-chat-title">Enyi AI</h2>
+            <div className="ai-chat-badge">Enyi AI</div>
+            <h2 className="ai-chat-title">Ask Enyi</h2>
           </div>
           <p className="ai-chat-subtitle">
-            Your intelligent business finance assistant
+          
             {region === "scotland" && (
               <span className="ai-region-badge ai-region-badge-scotland">
                 🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scottish rates
