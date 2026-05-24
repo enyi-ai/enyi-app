@@ -18,7 +18,7 @@ function LandingPage({ onGetStarted }) {
               <div className="brand-text">
                 <h1 className="brand-name">Enyi</h1>
                 <p className="brand-tagline">
-                  Your smartest business partner
+                  Your smart business partner
                 </p>
               </div>
             </div>

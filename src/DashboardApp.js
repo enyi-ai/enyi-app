@@ -1489,7 +1489,7 @@ const deleteOtherIncomeSource = (id) => {
             </div>
             <div className="brand-text">
               <h1 className="brand-name">Enyi</h1>
-              <p className="brand-tagline">Your smartest business partner</p>
+              <p className="brand-tagline">Your smart business partner</p>
             </div>
           </div>
           <div className="nav-menu-wrapper">
