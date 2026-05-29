@@ -16,7 +16,7 @@ function TermsOfService() {
 
       <p>
         Welcome to <strong>Enyi</strong>, a product of{" "}
-        <strong>CNTL Technologies Ltd</strong>. By using Enyi, you agree
+        <strong>JirOAK Labs Ltd</strong>. By using Enyi, you agree
         to these Terms of Service.
       </p>
 
@@ -74,7 +74,7 @@ function TermsOfService() {
 
       <h2>7. Limitation of Liability</h2>
       <p>
-        To the maximum extent permitted by law, CNTL Technologies Ltd
+        To the maximum extent permitted by law, JirOAK Labs Ltd
         is not liable for indirect losses, lost profits, business interruption,
         or decisions made based on app-generated guidance.
       </p>
