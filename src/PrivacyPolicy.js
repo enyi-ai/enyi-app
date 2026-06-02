@@ -17,7 +17,7 @@ function PrivacyPolicy() {
         </p>
 
         <p>
-          <strong>Enyi is a product of CNTL Technologies Ltd.</strong>
+          <strong>Enyi is a product of JirOAK Labs Ltd.</strong>
         </p>
 
         {/* paste the rest of the policy content here */}
