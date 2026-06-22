@@ -90,6 +90,55 @@ const [snapshotMonth, setSnapshotMonth] = useState(new Date());
 
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [installPrompt, setInstallPrompt] = useState(null);
+const [showInstallBanner, setShowInstallBanner] = useState(false);
+const [isIOS, setIsIOS] = useState(false);
+
+useEffect(() => {
+  // Detect iOS
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  setIsIOS(ios);
+
+  // Check if already installed (standalone mode)
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+
+  if (isStandalone) return;
+
+  // Check if user dismissed it before
+  const dismissed = localStorage.getItem("enyi-install-dismissed");
+  if (dismissed) return;
+
+  if (ios) {
+    setShowInstallBanner(true);
+    return;
+  }
+
+  // Android/Chrome — listen for native prompt
+  const handler = (e) => {
+    e.preventDefault();
+    setInstallPrompt(e);
+    setShowInstallBanner(true);
+  };
+  window.addEventListener("beforeinstallprompt", handler);
+  return () => window.removeEventListener("beforeinstallprompt", handler);
+}, []);
+
+const handleInstallClick = async () => {
+  if (installPrompt) {
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === "accepted") {
+      setShowInstallBanner(false);
+    }
+  }
+};
+
+const dismissInstallBanner = () => {
+  setShowInstallBanner(false);
+  localStorage.setItem("enyi-install-dismissed", "true");
+};
+
 
   const [transactions, setTransactions] = useState([]);
   const [, setInsights] = useState([]);
@@ -1515,6 +1564,30 @@ const deleteOtherIncomeSource = (id) => {
             )}
           </div>
         </header>
+        {showInstallBanner && (
+  <div className="install-banner">
+    <div className="install-banner-left">
+      <div className="install-banner-icon">📲</div>
+      <div>
+        <div className="install-banner-title">Add Enyi to your Home Screen</div>
+        <div className="install-banner-sub">
+          {isIOS
+            ? "Tap the Share button below, then \"Add to Home Screen\""
+            : "Get quick access — install Enyi like an app"}
+        </div>
+      </div>
+    </div>
+    <div className="install-banner-actions">
+      {!isIOS && (
+        <button className="install-banner-btn" onClick={handleInstallClick}>
+          Install
+        </button>
+      )}
+      <button className="install-banner-close" onClick={dismissInstallBanner}>✕</button>
+    </div>
+  </div>
+)}
+
 
         <section className="hero-card">
           <div className="hero-grid">
