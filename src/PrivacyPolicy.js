@@ -10,7 +10,7 @@ function PrivacyPolicy() {
 <p><strong>Last updated:</strong> 26 April 2026</p>
 
         <p>
-          Enyi (“Enyi”, “we”, “us”, or “our”) is a digital bookkeeping and
+          Enyi (“Enyi”, “we”, “us”, or “our”) is an AI CFO and
           finance platform designed to help individuals and businesses organise
           financial records, categorise transactions, upload receipts, and
           receive AI-assisted bookkeeping insights.
