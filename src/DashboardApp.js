@@ -90,6 +90,56 @@ const [snapshotMonth, setSnapshotMonth] = useState(new Date());
 
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [installPrompt, setInstallPrompt] = useState(null);
+const [showInstallBanner, setShowInstallBanner] = useState(false);
+const [isIOS, setIsIOS] = useState(false);
+
+useEffect(() => {
+  // Detect iOS
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  setIsIOS(ios);
+
+  // Check if already installed (standalone mode)
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+
+  if (isStandalone) return;
+
+  // Check if user dismissed it before
+  const dismissed = localStorage.getItem("enyi-install-dismissed");
+  if (dismissed) return;
+
+  if (ios) {
+    setShowInstallBanner(true);
+    return;
+  }
+
+  // Android/Chrome — listen for native prompt
+  const handler = (e) => {
+    e.preventDefault();
+    setInstallPrompt(e);
+    setShowInstallBanner(true);
+  };
+  window.addEventListener("beforeinstallprompt", handler);
+  return () => window.removeEventListener("beforeinstallprompt", handler);
+}, []);
+
+const handleInstallClick = async () => {
+  if (installPrompt) {
+    installPrompt.prompt();
+    const result = await installPrompt.userChoice;
+    if (result.outcome === "accepted") {
+      setShowInstallBanner(false);
+    }
+  }
+};
+
+const dismissInstallBanner = () => {
+  setShowInstallBanner(false);
+  localStorage.setItem("enyi-install-dismissed", "true");
+};
+
+
   const [transactions, setTransactions] = useState([]);
   const [, setInsights] = useState([]);
   const [showInsight, setShowInsight] = useState(false);
