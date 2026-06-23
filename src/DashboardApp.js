@@ -33,6 +33,8 @@ import GoalSetupModal from "./components/GoalSetupModal";
 import SettingsModal from "./components/SettingsModal";
 import "./components/GoalSetupModal.css";
 import "./components/SettingsModal.css";
+import "./components/InstallModal.css";
+
 
 function getCurrentFinancialYear() {
   const today = new Date();
@@ -1564,29 +1566,71 @@ const deleteOtherIncomeSource = (id) => {
             )}
           </div>
         </header>
-        {showInstallBanner && (
-  <div className="install-banner">
-    <div className="install-banner-left">
-      <div className="install-banner-icon">📲</div>
-      <div>
-        <div className="install-banner-title">Add Enyi to your Home Screen</div>
-        <div className="install-banner-sub">
-          {isIOS
-            ? "Tap the Share button below, then \"Add to Home Screen\""
-            : "Get quick access — install Enyi like an app"}
+   {showInstallBanner && (
+  <div className="install-modal-overlay">
+    <div className="install-modal-card">
+      <button className="install-modal-close" onClick={dismissInstallBanner} type="button">✕</button>
+
+      <div className="install-modal-header">
+        <div className="install-modal-icon-wrap">
+          <img src={logoIcon} alt="Enyi" className="install-modal-icon" />
+        </div>
+        <h2 className="install-modal-title">Install Enyi App</h2>
+        <p className="install-modal-sub">Get the full app experience on your home screen</p>
+      </div>
+
+      <div className="install-modal-benefits">
+        <div className="install-modal-benefit">
+          <span className="install-modal-check">✓</span>
+          Faster access from your home screen
+        </div>
+        <div className="install-modal-benefit">
+          <span className="install-modal-check">✓</span>
+          Works like a native app — no app store needed
+        </div>
+        <div className="install-modal-benefit">
+          <span className="install-modal-check">✓</span>
+          Quick access to your numbers and tax position
         </div>
       </div>
-    </div>
-    <div className="install-banner-actions">
-      {!isIOS && (
-        <button className="install-banner-btn" onClick={handleInstallClick}>
-          Install
-        </button>
+
+      <div className="install-modal-divider" />
+
+      {isIOS ? (
+        <div className="install-modal-steps">
+          <h3 className="install-modal-steps-title">Install on iPhone/iPad</h3>
+          <p className="install-modal-steps-sub">Follow these simple steps to install:</p>
+
+          <div className="install-modal-step">
+            <span className="install-modal-step-num">1</span>
+            <span>Tap the Share button at the bottom of the screen</span>
+          </div>
+          <div className="install-modal-step">
+            <span className="install-modal-step-num">2</span>
+            <span>Scroll down and tap "Add to Home Screen"</span>
+          </div>
+          <div className="install-modal-step">
+            <span className="install-modal-step-num">3</span>
+            <span>Tap "Add" to confirm installation</span>
+          </div>
+        </div>
+      ) : (
+        <div className="install-modal-steps">
+          <h3 className="install-modal-steps-title">Install on Android</h3>
+          <p className="install-modal-steps-sub">Tap below to install instantly:</p>
+          <button className="install-modal-install-btn" onClick={handleInstallClick} type="button">
+            Install Now
+          </button>
+        </div>
       )}
-      <button className="install-banner-close" onClick={dismissInstallBanner}>✕</button>
+
+      <button className="install-modal-later-btn" onClick={dismissInstallBanner} type="button">
+        Maybe Later
+      </button>
     </div>
   </div>
 )}
+
 
 
         <section className="hero-card">
