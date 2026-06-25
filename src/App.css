@@ -1359,3 +1359,69 @@ html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }
   line-height: 1.4;
 }
 
+.install-band {
+  margin: 4px 0 18px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(9,17,31,0.04), 0 12px 28px rgba(9,17,31,0.07);
+}
+.install-band-row { display: flex; align-items: center; gap: 14px; }
+
+.install-band-glyph {
+  width: 44px; height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 13px; color: #fff;
+  background: linear-gradient(135deg, #2dd4bf 0%, #6366f1 55%, #8b5cf6 100%);
+  box-shadow: 0 6px 16px rgba(99,102,241,0.30);
+}
+
+.install-band-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.install-band-title {
+  font-weight: 700; color: var(--text); font-size: 15px;
+  letter-spacing: -0.015em; line-height: 1.25;
+}
+.install-band-sub {
+  color: var(--muted); font-size: 13px; line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.install-band-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.install-band-btn {
+  border: none; cursor: pointer;
+  background: linear-gradient(135deg, #14b8a6 0%, #6366f1 100%);
+  color: #fff; font-weight: 700; font-size: 14px; letter-spacing: -0.01em;
+  padding: 10px 20px; border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(20,184,166,0.28);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.install-band-btn:hover { filter: brightness(1.04); box-shadow: 0 6px 16px rgba(20,184,166,0.34); }
+.install-band-btn:active { transform: translateY(1px) scale(0.99); }
+
+.install-band-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; flex-shrink: 0;
+  border: none; background: transparent; color: var(--muted);
+  border-radius: 50%; cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+.install-band-close:hover { background: var(--bg-soft); color: var(--text); }
+
+.install-band-steps {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 9px;
+}
+.install-band-steps span { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); }
+.install-band-steps b {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--bg-soft); color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+}
+
+@media (max-width: 380px) {
+  .install-band-btn { padding: 9px 16px; }
+  .install-band-glyph { width: 40px; height: 40px; }
+}

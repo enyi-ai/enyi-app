@@ -33,7 +33,7 @@ import GoalSetupModal from "./components/GoalSetupModal";
 import SettingsModal from "./components/SettingsModal";
 import "./components/GoalSetupModal.css";
 import "./components/SettingsModal.css";
-import "./components/InstallModal.css";
+
 
 
 function getCurrentFinancialYear() {
@@ -95,50 +95,91 @@ const [snapshotMonth, setSnapshotMonth] = useState(new Date());
   const [installPrompt, setInstallPrompt] = useState(null);
 const [showInstallBanner, setShowInstallBanner] = useState(false);
 const [isIOS, setIsIOS] = useState(false);
+const [isStandalone, setIsStandalone] = useState(false);
+const [showIOSSteps, setShowIOSSteps] = useState(false);
 
 useEffect(() => {
-  // Detect iOS
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   setIsIOS(ios);
 
-  // Check if already installed (standalone mode)
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+const standalone = window.matchMedia("(display-mode: standalone)").matches
     || window.navigator.standalone === true;
+  setIsStandalone(standalone);
 
-  if (isStandalone) return;
+  if (standalone) return;
 
-  // Check if user dismissed it before
-  const dismissed = localStorage.getItem("enyi-install-dismissed");
-  if (dismissed) return;
+  // Dismiss flag now has a 14-day expiry instead of being permanent
+  const dismissedAt = localStorage.getItem("enyi-install-dismissed");
+  if (dismissedAt && Date.now() - Number(dismissedAt) < 14 * 24 * 60 * 60 * 1000) {
+    return;
+  }
 
   if (ios) {
     setShowInstallBanner(true);
     return;
   }
 
-  // Android/Chrome — listen for native prompt
-  const handler = (e) => {
-    e.preventDefault();
-    setInstallPrompt(e);
+  // The event may have already fired before this component mounted —
+  // index.js stashed it on window, so check there first.
+  if (window.deferredInstallPrompt) {
+    setInstallPrompt(window.deferredInstallPrompt);
+    setShowInstallBanner(true);
+  }
+
+  // And still listen in case it fires after mount.
+  const onAvailable = () => {
+    setInstallPrompt(window.deferredInstallPrompt);
     setShowInstallBanner(true);
   };
-  window.addEventListener("beforeinstallprompt", handler);
-  return () => window.removeEventListener("beforeinstallprompt", handler);
+  window.addEventListener("enyi-install-available", onAvailable);
+
+  const onInstalled = () => {
+    setShowInstallBanner(false);
+    window.deferredInstallPrompt = null;
+  };
+  window.addEventListener("appinstalled", onInstalled);
+
+  return () => {
+    window.removeEventListener("enyi-install-available", onAvailable);
+    window.removeEventListener("appinstalled", onInstalled);
+  };
 }, []);
 
 const handleInstallClick = async () => {
-  if (installPrompt) {
-    installPrompt.prompt();
-    const result = await installPrompt.userChoice;
-    if (result.outcome === "accepted") {
-      setShowInstallBanner(false);
-    }
+  const promptEvent = installPrompt || window.deferredInstallPrompt;
+  if (!promptEvent) return;
+  promptEvent.prompt();
+  const result = await promptEvent.userChoice;
+  if (result.outcome === "accepted") {
+    setShowInstallBanner(false);
+  }
+  window.deferredInstallPrompt = null;
+  setInstallPrompt(null);
+};
+const handleMenuInstall = async () => {
+  setMenuOpen(false);
+
+  // iOS has no install event — show the Share → Add to Home Screen steps
+  if (isIOS) {
+    localStorage.removeItem("enyi-install-dismissed");
+    setShowInstallBanner(true);
+    return;
+  }
+
+  // Android/Chrome — fire the native dialog if we have a captured event
+  const promptEvent = installPrompt || window.deferredInstallPrompt;
+  if (promptEvent) {
+    promptEvent.prompt();
+    const result = await promptEvent.userChoice;
+    if (result.outcome === "accepted") setIsStandalone(true);
+    window.deferredInstallPrompt = null;
+    setInstallPrompt(null);
   }
 };
 
 const dismissInstallBanner = () => {
   setShowInstallBanner(false);
-  localStorage.setItem("enyi-install-dismissed", "true");
+  localStorage.setItem("enyi-install-dismissed", String(Date.now()));
 };
 
 
@@ -1555,6 +1596,14 @@ const deleteOtherIncomeSource = (id) => {
   <button onClick={() => scrollToSection("spending-categories")}>Spending Categories</button>
   <button onClick={() => scrollToSection("enyi-ai")}>Enyi AI</button>
   <button onClick={() => scrollToSection("transaction-history")}>Transaction History</button>
+  {!isStandalone && (isIOS || installPrompt || window.deferredInstallPrompt) && (
+    <>
+      <div className="nav-divider" />
+      <button onClick={handleMenuInstall}>📲 Install App</button>
+    </>
+  )}
+  <div className="nav-divider" />
+
   <div className="nav-divider" />
 <button onClick={() => { setShowSettings(true); setMenuOpen(false); }}>
   ⚙️ Settings
@@ -1566,70 +1615,55 @@ const deleteOtherIncomeSource = (id) => {
             )}
           </div>
         </header>
-   {showInstallBanner && (
-  <div className="install-modal-overlay">
-    <div className="install-modal-card">
-      <button className="install-modal-close" onClick={dismissInstallBanner} type="button">✕</button>
-
-      <div className="install-modal-header">
-        <div className="install-modal-icon-wrap">
-          <img src={logoIcon} alt="Enyi" className="install-modal-icon" />
-        </div>
-        <h2 className="install-modal-title">Install Enyi App</h2>
-        <p className="install-modal-sub">Get the full app experience on your home screen</p>
+ {showInstallBanner && !isStandalone && (
+  <div className="install-band">
+    <div className="install-band-row">
+      <div className="install-band-glyph" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3v11" />
+          <path d="m7 11 5 5 5-5" />
+          <path d="M5 21h14" />
+        </svg>
       </div>
 
-      <div className="install-modal-benefits">
-        <div className="install-modal-benefit">
-          <span className="install-modal-check">✓</span>
-          Faster access from your home screen
-        </div>
-        <div className="install-modal-benefit">
-          <span className="install-modal-check">✓</span>
-          Works like a native app — no app store needed
-        </div>
-        <div className="install-modal-benefit">
-          <span className="install-modal-check">✓</span>
-          Quick access to your numbers and tax position
-        </div>
+      <div className="install-band-text">
+        <span className="install-band-title">Add Enyi to your home screen</span>
+        <span className="install-band-sub">
+          {isIOS
+            ? "One-tap access — no app store needed"
+            : "Open Enyi like a native app"}
+        </span>
       </div>
 
-      <div className="install-modal-divider" />
-
-      {isIOS ? (
-        <div className="install-modal-steps">
-          <h3 className="install-modal-steps-title">Install on iPhone/iPad</h3>
-          <p className="install-modal-steps-sub">Follow these simple steps to install:</p>
-
-          <div className="install-modal-step">
-            <span className="install-modal-step-num">1</span>
-            <span>Tap the Share button at the bottom of the screen</span>
-          </div>
-          <div className="install-modal-step">
-            <span className="install-modal-step-num">2</span>
-            <span>Scroll down and tap "Add to Home Screen"</span>
-          </div>
-          <div className="install-modal-step">
-            <span className="install-modal-step-num">3</span>
-            <span>Tap "Add" to confirm installation</span>
-          </div>
-        </div>
-      ) : (
-        <div className="install-modal-steps">
-          <h3 className="install-modal-steps-title">Install on Android</h3>
-          <p className="install-modal-steps-sub">Tap below to install instantly:</p>
-          <button className="install-modal-install-btn" onClick={handleInstallClick} type="button">
-            Install Now
+      <div className="install-band-actions">
+        {isIOS ? (
+          <button className="install-band-btn" type="button" onClick={() => setShowIOSSteps(v => !v)}>
+            {showIOSSteps ? "Hide" : "How"}
           </button>
-        </div>
-      )}
-
-      <button className="install-modal-later-btn" onClick={dismissInstallBanner} type="button">
-        Maybe Later
-      </button>
+        ) : (
+          <button className="install-band-btn" type="button" onClick={handleInstallClick}>
+            Install
+          </button>
+        )}
+        <button className="install-band-close" type="button" onClick={dismissInstallBanner} aria-label="Dismiss">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
     </div>
+
+    {isIOS && showIOSSteps && (
+      <div className="install-band-steps">
+        <span><b>1</b> Tap the Share icon in your browser bar</span>
+        <span><b>2</b> Choose “Add to Home Screen”</span>
+        <span><b>3</b> Tap “Add”</span>
+      </div>
+    )}
   </div>
 )}
+
 
 
 

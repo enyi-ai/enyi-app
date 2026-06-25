@@ -5,6 +5,12 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
+window.deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  window.deferredInstallPrompt = e;
+  window.dispatchEvent(new Event("enyi-install-available"));
+});
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
